@@ -275,7 +275,7 @@
     align-items: center; justify-content: flex-start; padding-top: 6px; pointer-events: none; }
   .feat-glow { position: absolute; left: 50%; top: 40px; width: 620px; height: 400px; margin-left: -310px; opacity: 0;
     background: radial-gradient(closest-side, rgba(255, 190, 90, .30), rgba(216, 171, 105, .10) 55%, transparent 78%); }
-  .feat-rocco { width: 330px; margin-bottom: -26px; height: auto; position: relative; filter: drop-shadow(0 10px 26px rgba(0, 0, 0, .85)); }
+  .feat-rocco { width: 230px; margin-bottom: 0; height: auto; position: relative; filter: drop-shadow(0 10px 26px rgba(0, 0, 0, .85)); }
   .feat-rule { position: relative; display: flex; align-items: center; gap: 12px; width: 360px; margin: 6px 0 14px; }
   .feat-rule i { flex: 1; height: 2px; background: linear-gradient(90deg, transparent, var(--gold)); transform-origin: right center; }
   .feat-rule i + b + i { background: linear-gradient(90deg, var(--gold), transparent); transform-origin: left center; }
@@ -440,11 +440,25 @@
    * below is Ludwig's own copy (their board, their site).
    */
   const PROMOS = [
+    // ----- Words and logo (Ludwig's own copy) -----
     { id: "bake-at-home", tv: 1, type: "signature", eyebrow: "Bake-at-Home", title: "Fresh & Local",
       desc: "All natural. No additives, no preservatives, nothing artificial.", brandImg: "ludwigs-logo.png", art: { w: 330 } },
+    // ----- Ludwig's own photos (their Facebook page, Nov 23, 2026) -----
     { id: "since-1998", type: "signature", eyebrow: "Since 1998", title: "Fine Foods & Catering",
-      desc: "Serving upper Chester County", brandImg: "ludwigs-logo.png", art: { w: 330 } },
-    { id: "bh-card", tv: 2, type: "signature", eyebrow: "Ludwig’s Deli", title: "Only the Best",
+      desc: "Serving upper Chester County", photo: "storefront-photo.jpg", focus: "50% 30%" },        // FB photo 1528891989236456 (storefront)
+    { id: "catering", type: "signature", eyebrow: "Catering", title: "Charcuterie Boards",
+      desc: "Order one for your next event", photo: "charcuterie-photo.jpg", focus: "50% 40%" },   // FB photo 1400096432116013
+    // TV 2: Ludwig's x Proudly Featuring Boar's Head (animated). 11 of Ludwig's
+    // own sandwich photos from their Facebook page, next one each time round.
+    // Whole sandwich sharp low in the frame, blurred copy of the same shot above.
+    { id: "boars-head", tv: 2, type: "signature", feature: "bh", seconds: 14, eyebrow: "Ludwig’s Deli", title: "Stacked High",
+      photo: "bh-sandwich-01.jpg", focus: "50% 100%",
+      // FB photos 1506156848176637, 1582043103921344, 1502063625252626, 1473129491479373, 1507900314668957,
+      // 1371998201592503, 1514145317377790, 1426496922809297, 1495775302548125, 1378126594312997, 1489290416529947
+      photos: ["bh-sandwich-01.jpg", "bh-sandwich-02.jpg", "bh-sandwich-03.jpg", "bh-sandwich-04.jpg", "bh-sandwich-05.jpg", "bh-sandwich-06.jpg",
+               "bh-sandwich-07.jpg", "bh-sandwich-08.jpg", "bh-sandwich-09.jpg", "bh-sandwich-10.jpg", "bh-sandwich-11.jpg"] },
+    // Retired Nov 23 for the animated tile above. Kept as a fallback.
+    { id: "bh-card", tv: 2, type: "signature", enabled: false, eyebrow: "Ludwig’s Deli", title: "Only the Best",
       brandImg: "boars-head-pf-white.png", art: { w: 420 } }
   ];
   // Always available, needs nothing from the network but the logo.
