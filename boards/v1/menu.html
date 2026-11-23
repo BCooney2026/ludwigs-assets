@@ -208,6 +208,19 @@
   /* Brand card (Boar's Head, Ludwig's logo, QR codes) */
   .brandart { width: 430px; }
   .brandart img { display: block; width: 100%; height: auto; filter: drop-shadow(0 12px 26px rgba(0, 0, 0, .6)); }
+  /* Live scenes set on the tablet: soups list, special price medal (gold = price). */
+  .soupcard { width: 426px; align-self: center; }
+  .soupcard ul { list-style: none; margin: 0; padding: 0; --sz: 44px; }
+  .soupcard li { display: flex; align-items: baseline; justify-content: space-between; gap: 14px;
+    padding: calc(var(--sz) * .3) 0; border-top: 1px solid var(--hair); }
+  .soupcard li:first-child { border-top: 0; }
+  .soupcard .nm { flex: 1; min-width: 0; font-family: "Playfair Display", Georgia, serif; font-weight: 900; font-style: italic;
+    font-size: var(--sz); line-height: 1.02; color: var(--ivory); text-shadow: 0 6px 24px rgba(0, 0, 0, .5); }
+  .soupcard .tg { flex: none; font-family: "Oswald", sans-serif; font-weight: 500; font-size: 16px; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--gold); white-space: nowrap; }
+  .slide.on .soupcard li { animation: drop .7s var(--ease) both; }
+  .medal.gold { background: radial-gradient(circle at 34% 28%, #f8e2ad, var(--gold) 52%, #8c6a2c); color: #1d160e; }
+  .medal.gold .price sup { color: #1d160e; }
 
   /* ---- the 12 second sequence. Everything is opacity / transform. ---- */
   /*
@@ -444,6 +457,16 @@
    * below is Ludwig's own copy (their board, their site).
    */
   const PROMOS = [
+    // =====================================================================
+    // LIVE (set on the tablet, Today tab). Not counted in the 5 + 5.
+    // Each one only shows while it is set: soups the day they were saved,
+    // the special until it ends, the cookie for its month. live: names
+    // which setting fills the scene (see liveSoups / liveSpecial / liveCookie).
+    // =====================================================================
+    { id: "t-cookie", tv: 1, type: "daily", live: "cookie", priority: 1, seconds: 10, eyebrow: "Cookie of the Month",
+      brandImg: "ludwigs-logo.png", art: { w: 330 } },
+    { id: "t-soups", tv: 2, type: "daily", live: "soups", priority: 2, seconds: 14, eyebrow: "Hot Soups Today" },
+    { id: "t-special", tv: 2, type: "daily", live: "special", priority: 1, seconds: 12, eyebrow: "Sandwich Special" },
     // =====================================================================
     // TV 1 (pizza): 5 pictures + 5 videos, none shared with TV 2.
     // =====================================================================
@@ -892,7 +915,28 @@
   function shopHour() {
     return Number(new Date().toLocaleString("en-US", { timeZone: RS.TZ, hour: "numeric", hour12: false })) % 24;
   }
+  /* Live scenes: what the counter set on the tablet. The dates come with
+     the feed, so a TV that kept last night's feed still drops them. */
+  function liveSoups() {
+    const s = RS.settings;
+    return s.soupsDate === RS.today() && Array.isArray(s.soups) ? s.soups.filter(x => x && x.name).slice(0, 8) : [];
+  }
+  function liveSpecial() {
+    const s = RS.settings, sp = s.special;
+    return sp && sp.name && sp.price && (!s.specialEnds || s.specialEnds >= RS.today()) ? sp : null;
+  }
+  function liveCookie() {
+    const s = RS.settings;
+    return s.cookie && s.cookieMonth === RS.today().slice(0, 7) ? String(s.cookie) : "";
+  }
+  function liveOn(p) {
+    if (p.live === "soups") return liveSoups().length > 0;
+    if (p.live === "special") return !!liveSpecial();
+    if (p.live === "cookie") return !!liveCookie();
+    return true;
+  }
   function promoPrice(p) {
+    if (p.live === "special") { const sp = liveSpecial(); return sp ? sp.price : ""; }
     if (!p.priceId || isBrandSpot(p)) return "";
     return p.size ? RS.size(p.priceId, p.size) : RS.price(p.priceId);
   }
@@ -902,6 +946,7 @@
     const day = weekday(), hour = shopHour(), today = RS.today();
     list = PROMOS.filter(p => {
       if (p.enabled === false) return false;
+      if (p.live && !liveOn(p)) return false;                  // nothing set on the tablet
       if (p.tv && p.tv !== tv) return false;
       if (p.days && p.days.indexOf(day) < 0) return false;
       if (p.hours && (hour < p.hours[0] || hour >= p.hours[1])) return false;
@@ -997,6 +1042,10 @@
       art = '<div class="plate" style="width:' + (a.w || 460) + 'px;margin-left:' + (a.x || 0) + 'px;margin-top:' + (a.y || 0) + 'px;transform-origin:center">' +
         '<div class="zoom"><div style="position:relative;transform:rotate(' + (a.rot || 0) + 'deg)"><img src="' + src + '" alt="">' +
         '<div class="sweep" style="-webkit-mask-image:url(' + src + ');mask-image:url(' + src + ')"></div></div></div></div>';
+    } else if (p.live === "soups") {
+      art = '<div class="soupcard"><ul></ul></div>';
+    } else if (p.live === "special") {
+      art = '<div class="medal gold"><span class="price"></span><small>Special</small></div>';
     } else if (p.brandImg) {
       art = '<div class="brandart"' + (a.w ? ' style="width:' + a.w + 'px"' : '') + '><img src="' + IMG + p.brandImg + '" alt=""></div>';
     } else if (p.wordmark) {
@@ -1005,8 +1054,9 @@
       art = '<div class="medal"><span class="price"></span>' + (p.badge ? '<small>' + esc(p.badge) + '</small>' : '') + '</div>';
     }
     const medalOnly = !p.video && !p.photo && !p.img && !p.brandImg && !p.wordmark;
-    const title = spot ? (p.brandTitle || "") : (p.title || "");
-    const desc = spot ? "" : (p.desc || "");
+    // Live scenes get their words in dressLive (they change from the tablet).
+    const title = p.live ? (p.live === "soups" ? "" : " ") : spot ? (p.brandTitle || "") : (p.title || "");
+    const desc = p.live === "special" ? " " : spot ? "" : (p.desc || "");
     const priced = !!p.priceId && !spot && !medalOnly;
     el.innerHTML = '<div class="art">' + art + '</div><div class="copy">' +
       '<div class="eyebrow">' + (p.badge && !medalOnly && !spot ? '<span class="badge">' + esc(p.badge) + '</span>' : '') +
@@ -1025,6 +1075,7 @@
    * is tall, so the food never runs into the words.
    */
   function dressSlide(p, el) {
+    if (p.live) dressLive(p, el);
     el.style.setProperty("--dur", secondsOf(p) + "s");
     el.querySelectorAll(".price").forEach(n => { n.innerHTML = RS.money(promoPrice(p)); });
     const t = el.querySelector(".title");
@@ -1043,6 +1094,29 @@
       const full = Math.min(a.w || 430, 440), w = Math.round(Math.min(full, room / tall));
       plate.style.width = w + "px";
       plate.style.marginLeft = Math.round((a.x || 0) * w / full) + "px";
+    }
+  }
+
+  /** Words for a live scene, fresh from the feed. Soups shrink to fit (up to 8). */
+  function dressLive(p, el) {
+    if (p.live === "soups") {
+      const list = liveSoups();
+      const ul = el.querySelector(".soupcard ul");
+      ul.innerHTML = list.map((s, i) => '<li style="animation-delay:' + (0.5 + i * 0.12).toFixed(2) + 's"><span class="nm">' + esc(s.name) + '</span>' +
+        (Array.isArray(s.tags) && s.tags.length ? '<span class="tg">' + s.tags.map(esc).join(" · ") + '</span>' : '') + '</li>').join("");
+      const room = el.querySelector(".art").clientHeight - 24;
+      let sz = list.length <= 4 ? 46 : list.length <= 6 ? 40 : 34;
+      ul.style.setProperty("--sz", sz + "px");
+      while (ul.offsetHeight > room && sz > 24) { sz -= 2; ul.style.setProperty("--sz", sz + "px"); }
+      return;
+    }
+    const t = el.querySelector(".title"), d = el.querySelector(".desc");
+    if (p.live === "special") {
+      const sp = liveSpecial() || { name: "", desc: "" };
+      if (t) t.textContent = sp.name;
+      if (d) { d.textContent = sp.desc || ""; d.style.display = sp.desc ? "" : "none"; }
+    } else if (p.live === "cookie") {
+      if (t) t.textContent = liveCookie();
     }
   }
 
