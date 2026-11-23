@@ -185,7 +185,7 @@
     background-size: 300% 100%; background-position: 120% 0;
     -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
 
-  .copy { flex: none; padding: 0 28px 0 36px; position: relative; z-index: 2; }
+  .copy { flex: none; padding: 0 28px 18px 36px; position: relative; z-index: 2; }
   .eyebrow { font-family: "Oswald", sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: .3em;
     color: var(--green); font-size: 18px; display: flex; align-items: center; gap: 16px; white-space: nowrap; }
   .eyebrow::after { content: ""; flex: 1; max-width: 120px; height: 1px; background: linear-gradient(90deg, var(--gold), transparent); }
@@ -446,7 +446,7 @@
     // ----- Ludwig's own photos (their Facebook page, Nov 23, 2026) -----
     { id: "since-1998", type: "signature", eyebrow: "Since 1998", title: "Fine Foods & Catering",
       desc: "Serving upper Chester County", photo: "storefront-photo.jpg", focus: "50% 30%" },        // FB photo 1528891989236456 (storefront)
-    { id: "catering", type: "signature", eyebrow: "Catering", title: "Charcuterie Boards",
+    { id: "catering", tv: 1, type: "signature", eyebrow: "Catering", title: "Charcuterie Boards",
       desc: "Order one for your next event", photo: "charcuterie-photo.jpg", focus: "50% 40%" },   // FB photo 1400096432116013
     // TV 2: Ludwig's x Proudly Featuring Boar's Head (animated). 11 of Ludwig's
     // own sandwich photos from their Facebook page, next one each time round.
@@ -457,6 +457,27 @@
       // 1371998201592503, 1514145317377790, 1426496922809297, 1495775302548125, 1378126594312997, 1489290416529947
       photos: ["bh-sandwich-01.jpg", "bh-sandwich-02.jpg", "bh-sandwich-03.jpg", "bh-sandwich-04.jpg", "bh-sandwich-05.jpg", "bh-sandwich-06.jpg",
                "bh-sandwich-07.jpg", "bh-sandwich-08.jpg", "bh-sandwich-09.jpg", "bh-sandwich-10.jpg", "bh-sandwich-11.jpg"] },
+    // ----- Videos: free Pexels stock, so unpriced brand spots (no item name, no price).
+    // Cut to 720x1280, 9 s (catering 7 s), play once then hold the still.
+    // Headlines use Ludwig's own words where they have them.
+    { id: "v-pizza-build", tv: 1, type: "brand", footage: "stock", seconds: 9, eyebrow: "Bake-at-Home Pizza", brandTitle: "Built Fresh",
+      video: "pizza-build.mp4", poster: "pizza-build.jpg", loop: false },            // Pexels 5898377
+    { id: "v-pizza-spinach", tv: 1, type: "brand", footage: "stock", seconds: 9, eyebrow: "White Pizzas", brandTitle: "Olive Oil & Garlic",
+      video: "pizza-spinach.mp4", poster: "pizza-spinach.jpg", loop: false },        // Pexels 5898129
+    { id: "v-pizza-toppings", tv: 1, type: "brand", footage: "stock", seconds: 9, eyebrow: "Specialty Pizzas", brandTitle: "Loaded Up",
+      video: "pizza-toppings.mp4", poster: "pizza-toppings.jpg", loop: false },      // Pexels 5898903
+    { id: "v-pizza-sauce", tv: 1, type: "brand", footage: "stock", seconds: 9, eyebrow: "Red Pizzas", brandTitle: "Homemade Sauce",
+      video: "pizza-sauce.mp4", poster: "pizza-sauce.jpg", loop: false },            // Pexels 7172277
+    { id: "v-soup-ladle", tv: 2, type: "brand", footage: "stock", seconds: 9, eyebrow: "Hot Soups Daily", brandTitle: "Homemade Soup",
+      video: "soup-ladle.mp4", poster: "soup-ladle.jpg", loop: false },              // Pexels 37336713
+    { id: "v-soup-crock", tv: 2, type: "brand", footage: "stock", seconds: 9, eyebrow: "Hot Soups Daily", brandTitle: "Soup Season",
+      video: "soup-crock.mp4", poster: "soup-crock.jpg", loop: false },              // Pexels 35510474
+    { id: "v-deli-sandwich", tv: 2, type: "brand", footage: "stock", seconds: 9, eyebrow: "Ludwig’s Deli", brandTitle: "Stacked & Sliced",
+      video: "deli-sandwich.mp4", poster: "deli-sandwich.jpg", loop: false },        // Pexels 41189329
+    { id: "v-catering-trays", tv: 2, type: "brand", footage: "stock", seconds: 7, eyebrow: "Catering", brandTitle: "Party Ready",
+      video: "catering-trays.mp4", poster: "catering-trays.jpg", loop: false },      // Pexels 17529644
+    { id: "v-lasagna", tv: 2, type: "brand", footage: "stock", seconds: 9, eyebrow: "Italian Dinners", brandTitle: "Dinner’s Done",
+      video: "lasagna.mp4", poster: "lasagna.jpg", loop: false },                    // Pexels 6162079
     // Retired Nov 23 for the animated tile above. Kept as a fallback.
     { id: "bh-card", tv: 2, type: "signature", enabled: false, eyebrow: "Ludwig’s Deli", title: "Only the Best",
       brandImg: "boars-head-pf-white.png", art: { w: 420 } }
@@ -1202,7 +1223,10 @@
    *   &showevery=N shortens the cycle (preview).
    */
   const SHOWS = [
-    // Full-screen reels go here once Ludwig's has footage (stock = unpriced brand spots).
+    // Pexels 5898377, 5898129, 5898903 (one shoot). Hands off to the pizza-build clip.
+    { id: "show-pizza", tv: 1, hero: "v-pizza-build", eyebrow: "Bake-at-Home Pizza", title: "Pizza Night." },
+    // Pexels 35510474, 6162079, 17529644. Ends on the charcuterie, hands off to it.
+    { id: "show-madehere", tv: 2, hero: "v-catering-trays", eyebrow: "Soups, Dinners & Catering", title: "Made Here." }
   ];
   const SHOW_SECONDS = 9;
   const SHOW_EVERY = Math.max(20, Number(params.get("showevery")) || 150);
