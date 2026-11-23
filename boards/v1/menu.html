@@ -417,6 +417,10 @@
     (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
 
   /*
+   * RULE (Brian, Nov 23): each TV needs at least 5 pictures and 5 videos, and no
+   * picture or video may appear on both TVs. Give every new scene a tv: 1 or 2.
+   * Quality bar: 8 out of 10. Anything Brian rates under that is switched off.
+   *
    * PROMOS: what the window (left panel) can show. One entry per scene.
    *   id        unique name
    *   tv        1, 2, or leave out for both
@@ -444,7 +448,7 @@
     { id: "bake-at-home", tv: 1, type: "signature", eyebrow: "Bake-at-Home", title: "Fresh & Local",
       desc: "All natural. No additives, no preservatives, nothing artificial.", brandImg: "ludwigs-logo.png", art: { w: 330 } },
     // ----- Ludwig's own photos (their Facebook page, Nov 23, 2026) -----
-    { id: "since-1998", type: "signature", eyebrow: "Since 1998", title: "Fine Foods & Catering",
+    { id: "since-1998", tv: 1, type: "signature", eyebrow: "Since 1998", title: "Fine Foods & Catering",
       desc: "Serving upper Chester County", photo: "storefront-photo.jpg", focus: "50% 30%" },        // FB photo 1528891989236456 (storefront)
     { id: "catering", tv: 1, type: "signature", eyebrow: "Catering", title: "Charcuterie Boards",
       desc: "Order one for your next event", photo: "charcuterie-photo.jpg", focus: "50% 40%" },   // FB photo 1400096432116013
@@ -458,25 +462,28 @@
       photos: ["bh-sandwich-01.jpg", "bh-sandwich-02.jpg", "bh-sandwich-03.jpg", "bh-sandwich-04.jpg", "bh-sandwich-05.jpg", "bh-sandwich-06.jpg",
                "bh-sandwich-07.jpg", "bh-sandwich-08.jpg", "bh-sandwich-09.jpg", "bh-sandwich-10.jpg", "bh-sandwich-11.jpg"] },
     // ----- Videos: free Pexels stock, so unpriced brand spots (no item name, no price).
+    // Brian rated them Nov 23 (out of 10). The bar is 8+. Under 7 is switched off:
+    // pizza-build 6, pizza-spinach 5, pizza-toppings 6, pizza-sauce 4, soup-ladle 5,
+    // soup-crock 3, lasagna 2. Kept: deli-sandwich 7, catering-trays 8.
     // Cut to 720x1280, 9 s (catering 7 s), play once then hold the still.
     // Headlines use Ludwig's own words where they have them.
-    { id: "v-pizza-build", tv: 1, type: "brand", footage: "stock", seconds: 9, eyebrow: "Bake-at-Home Pizza", brandTitle: "Built Fresh",
+    { id: "v-pizza-build", enabled: false, tv: 1, type: "brand", footage: "stock", seconds: 9, eyebrow: "Bake-at-Home Pizza", brandTitle: "Built Fresh",
       video: "pizza-build.mp4", poster: "pizza-build.jpg", loop: false },            // Pexels 5898377
-    { id: "v-pizza-spinach", tv: 1, type: "brand", footage: "stock", seconds: 9, eyebrow: "White Pizzas", brandTitle: "Olive Oil & Garlic",
+    { id: "v-pizza-spinach", enabled: false, tv: 1, type: "brand", footage: "stock", seconds: 9, eyebrow: "White Pizzas", brandTitle: "Olive Oil & Garlic",
       video: "pizza-spinach.mp4", poster: "pizza-spinach.jpg", loop: false },        // Pexels 5898129
-    { id: "v-pizza-toppings", tv: 1, type: "brand", footage: "stock", seconds: 9, eyebrow: "Specialty Pizzas", brandTitle: "Loaded Up",
+    { id: "v-pizza-toppings", enabled: false, tv: 1, type: "brand", footage: "stock", seconds: 9, eyebrow: "Specialty Pizzas", brandTitle: "Loaded Up",
       video: "pizza-toppings.mp4", poster: "pizza-toppings.jpg", loop: false },      // Pexels 5898903
-    { id: "v-pizza-sauce", tv: 1, type: "brand", footage: "stock", seconds: 9, eyebrow: "Red Pizzas", brandTitle: "Homemade Sauce",
+    { id: "v-pizza-sauce", enabled: false, tv: 1, type: "brand", footage: "stock", seconds: 9, eyebrow: "Red Pizzas", brandTitle: "Homemade Sauce",
       video: "pizza-sauce.mp4", poster: "pizza-sauce.jpg", loop: false },            // Pexels 7172277
-    { id: "v-soup-ladle", tv: 2, type: "brand", footage: "stock", seconds: 9, eyebrow: "Hot Soups Daily", brandTitle: "Homemade Soup",
+    { id: "v-soup-ladle", enabled: false, tv: 2, type: "brand", footage: "stock", seconds: 9, eyebrow: "Hot Soups Daily", brandTitle: "Homemade Soup",
       video: "soup-ladle.mp4", poster: "soup-ladle.jpg", loop: false },              // Pexels 37336713
-    { id: "v-soup-crock", tv: 2, type: "brand", footage: "stock", seconds: 9, eyebrow: "Hot Soups Daily", brandTitle: "Soup Season",
+    { id: "v-soup-crock", enabled: false, tv: 2, type: "brand", footage: "stock", seconds: 9, eyebrow: "Hot Soups Daily", brandTitle: "Soup Season",
       video: "soup-crock.mp4", poster: "soup-crock.jpg", loop: false },              // Pexels 35510474
     { id: "v-deli-sandwich", tv: 2, type: "brand", footage: "stock", seconds: 9, eyebrow: "Ludwig’s Deli", brandTitle: "Stacked & Sliced",
       video: "deli-sandwich.mp4", poster: "deli-sandwich.jpg", loop: false },        // Pexels 41189329
     { id: "v-catering-trays", tv: 2, type: "brand", footage: "stock", seconds: 7, eyebrow: "Catering", brandTitle: "Party Ready",
       video: "catering-trays.mp4", poster: "catering-trays.jpg", loop: false },      // Pexels 17529644
-    { id: "v-lasagna", tv: 2, type: "brand", footage: "stock", seconds: 9, eyebrow: "Italian Dinners", brandTitle: "Dinner’s Done",
+    { id: "v-lasagna", enabled: false, tv: 2, type: "brand", footage: "stock", seconds: 9, eyebrow: "Italian Dinners", brandTitle: "Dinner’s Done",
       video: "lasagna.mp4", poster: "lasagna.jpg", loop: false },                    // Pexels 6162079
     // Retired Nov 23 for the animated tile above. Kept as a fallback.
     { id: "bh-card", tv: 2, type: "signature", enabled: false, eyebrow: "Ludwig’s Deli", title: "Only the Best",
@@ -1223,10 +1230,9 @@
    *   &showevery=N shortens the cycle (preview).
    */
   const SHOWS = [
-    // Pexels 5898377, 5898129, 5898903 (one shoot). Hands off to the pizza-build clip.
-    { id: "show-pizza", tv: 1, hero: "v-pizza-build", eyebrow: "Bake-at-Home Pizza", title: "Pizza Night." },
-    // Pexels 35510474, 6162079, 17529644. Ends on the charcuterie, hands off to it.
-    { id: "show-madehere", tv: 2, hero: "v-catering-trays", eyebrow: "Soups, Dinners & Catering", title: "Made Here." }
+    // Nov 23: no full-screen reels for now. "Pizza Night." and "Made Here." were
+    // built from clips Brian rated 2 to 6, and the deli clip (7 in the window) did
+    // not hold up full screen. Bar is 8+. Next reels come from real Ludwig's footage.
   ];
   const SHOW_SECONDS = 9;
   const SHOW_EVERY = Math.max(20, Number(params.get("showevery")) || 150);
