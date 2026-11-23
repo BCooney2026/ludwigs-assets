@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ludwig's Village Market Menu</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  The TVs' start URL points here (boards/menu.html?tv=1 / ?tv=2).
+  This page forwards to the current board, keeping ?tv= and anything else.
+    Current board:  v1/menu.html  (first build, Nov 23, 2026)
+  To roll back to an older board, point TARGET at it and push.
+-->
+<script>
+  var TARGET = "v1/menu.html";
+  // Fresh stamp so the TV never reuses a stale copy of the board.
+  var q = location.search ? location.search + "&" : "?";
+  location.replace(TARGET + q + "rv=" + Date.now() + location.hash);
+</script>
+<style>html,body{margin:0;background:#141210;}</style>
+</head>
+<body></body>
+</html>

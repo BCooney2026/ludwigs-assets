@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ludwig's Village Market Menu</title>
+<!--
+  LUDWIG'S VILLAGE MARKET MENU BOARD (boards/v1/)
+  Built from the Rocco's v2c engine. Shared player: ../signage.js.
+    menu.html?tv=1   Pizza: build your own, white, red, special sauces
+    menu.html?tv=2   Deli & Kitchen: sandwiches, strombolis,
+                     Italian dinners, pasta specialties
+  Options:  &motion=0   still pictures only (no movement)
+            &promo=ID   hold one scene on screen (ID from PROMOS)
+            &day=2      preview another weekday (1 = Monday)
+            &video=0    never play video, stills only
+            &show=0     no full-screen reels
+            &test86=L040,L052   preview sold out
+            &debug=1    troubleshooting box (never leave it on)
+
+  CONTENT RULES (Brian)
+  - Every item and every price stays on the board. If it does not fit,
+    fix spacing, wording or columns. Never cut an item.
+  - Prices come from Sheet IDs (L001 and up) through ../signage.js.
+    Nothing is typed here. Prices always show cents.
+  - Only claims Ludwig's own menus back up. Sources: Sandwich_Menu_26.doc
+    (= 2026_SandwichMenu.pdf on their site), the pizza TV board,
+    LudwigsPizzaMenu2023.pdf.
+  - One color, one meaning: green = section marks, gold = prices and
+    labels, red = SOLD OUT only.
+-->
+<style>
+  @font-face { font-family: "Barlow SC"; font-weight: 500; font-display: swap; src: url("fonts/barlow-semi-condensed-latin-500-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Barlow SC"; font-weight: 600; font-display: swap; src: url("fonts/barlow-semi-condensed-latin-600-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Barlow SC"; font-weight: 700; font-display: swap; src: url("fonts/barlow-semi-condensed-latin-700-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Oswald"; font-weight: 500; font-display: swap; src: url("fonts/oswald-latin-500-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Oswald"; font-weight: 600; font-display: swap; src: url("fonts/oswald-latin-600-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Playfair Display"; font-style: italic; font-weight: 900; font-display: swap; src: url("fonts/playfair-display-latin-900-italic.woff2") format("woff2"); }
+
+  :root {
+    --bg: #141210;
+    --surface: #24201b;
+    --ivory: #fbf5ea;
+    --ivory-2: #d9ccb8;
+    --ivory-3: rgba(232, 222, 206, .8);
+    --tomato: #c8402e;          /* SOLD OUT only */
+    --green: #79a34a;           /* section marks (pineapple green from the logo) */
+    --gold: #d2aa5f;
+    --price: #f3cf84;
+    --rule: rgba(216, 171, 105, .3);
+    --hair: rgba(255, 245, 233, .13);
+    --ease: cubic-bezier(.16, 1, .3, 1);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #000; cursor: none; }
+
+  /* Fixed 1920x1080 stage; ../signage.js scales and centers it on the TV. */
+  .stage { position: fixed; left: 50%; top: 50%; width: 1920px; height: 1080px; overflow: hidden;
+    transform-origin: center center; color: var(--ivory); background: var(--bg);
+    font-family: "Barlow SC", "Arial Narrow", Arial, sans-serif;
+    transition: margin .8s ease; -webkit-font-smoothing: antialiased; --fs: 1; --pad: 5; }
+  .env { position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(1100px 800px at 72% 30%, rgba(255, 214, 160, .05), transparent 62%),
+      linear-gradient(180deg, #1d1915 0%, #171411 50%, #110f0d 100%); }
+  .env::after { content: ""; position: absolute; inset: 0;
+    background: radial-gradient(130% 120% at 50% 45%, transparent 58%, rgba(0, 0, 0, .55) 100%); }
+
+  .price { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; letter-spacing: -.005em; }
+  .price sup { font-size: .52em; vertical-align: top; position: relative; top: .14em; margin-left: 1px; }
+
+  /* =====================================================================
+     MENU (right). Stable: nothing here moves except a changed price.
+     ===================================================================== */
+  .menu { position: absolute; left: 490px; right: 0; top: 0; bottom: 0; padding: 22px 30px 22px 38px;
+    display: grid; column-gap: 32px; }
+  .col { min-height: 0; display: flex; flex-direction: column; gap: calc(20px * var(--fs)); }
+
+  .sec { display: flex; flex-direction: column; flex: none; }
+  /* Category plate: the fastest thing to find from across the room. */
+  .sec-h { margin: 0 -12px; padding: calc(5px * var(--fs)) 12px calc(4px * var(--fs)) 20px; overflow: hidden; position: relative;
+    background: linear-gradient(90deg, #2d2621, var(--surface) 70%, rgba(37, 32, 28, .55));
+    border-radius: 4px; box-shadow: 0 6px 18px rgba(0, 0, 0, .28);
+    font-family: "Oswald", "Arial Narrow", sans-serif; font-weight: 600; text-transform: uppercase;
+    font-size: calc(31px * var(--fs)); line-height: 1.15; letter-spacing: .13em; color: var(--ivory); white-space: nowrap; }
+  .sec-h::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 7px; background: var(--green); border-radius: 4px 0 0 4px; }
+  .sec .bh-logo { display: block; width: calc(250px * var(--fs)); max-width: 100%; height: auto; aspect-ratio: 900 / 203; margin: calc(12px * var(--fs)) 0 0; }
+  .sec .by { font-family: "Oswald", sans-serif; font-weight: 500; letter-spacing: .2em; text-transform: uppercase;
+    font-size: calc(16px * var(--fs)); color: var(--gold); margin-top: calc(10px * var(--fs)); }
+  .sec .meta { font-size: calc(19px * var(--fs)); color: var(--gold); margin-top: calc(8px * var(--fs)); line-height: 1.2; font-weight: 500; font-style: italic; }
+  .sec .by + .meta { margin-top: 2px; }
+
+  .rows { margin-top: calc(4px * var(--fs)); display: flex; flex-direction: column; }
+  .row { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; align-items: baseline;
+    padding: calc(var(--pad) * 1px * var(--fs)) 0; }
+  .row + .row { border-top: 1px solid var(--hair); }
+  .row .n { font-weight: 600; font-size: calc(30px * var(--fs)); line-height: 1.06; overflow-wrap: break-word; }
+  .row .n .star { color: var(--green); font-size: .7em; margin-right: 6px; position: relative; top: -.14em; }
+  /* Two-line names: the price sits on the LAST line, next to the end of the
+     name (Bob's call, Nov 20). "end" is the fallback for old WebViews. */
+  .row .price { font-size: calc(31px * var(--fs)); text-align: right; color: var(--price); align-self: end; align-self: last baseline; }
+  /* Descriptions split into even lines, so one word ("crust", "salsa") never
+     dangles alone on line two. Older WebViews ignore it and wrap as before. */
+  .row .d { grid-column: 1 / -1; font-weight: 500; font-size: calc(20px * var(--fs)); line-height: 1.12; color: var(--ivory-3); margin-top: 1px; text-wrap: balance; }
+  /* Sandwich number (#1 to #17): small gold figure ahead of the name. */
+  .row .n .no { font-family: "Oswald", sans-serif; font-weight: 500; font-size: .74em; color: var(--gold); margin-right: 8px; letter-spacing: .02em; position: relative; top: -.04em; }
+  /* "Add chicken +4.00" and other add-on lines under a description. */
+  .row .d .add { color: var(--gold); font-weight: 600; white-space: nowrap; }
+  .row .d .add .price { color: var(--price); font-size: 1em; align-self: auto; }
+  .row .d .add .price sup { font-size: .6em; }
+  /* Section price strip (one price for every item in the section). */
+  .sec .sizes { margin-top: calc(8px * var(--fs)); }
+  .sizes span { font-size: calc(30px * var(--fs)); }
+  .sizes span.plus { font-size: calc(22px * var(--fs)); color: var(--ivory-2); font-weight: 600; }
+  .row.note .n { white-space: normal; line-height: 1.2; }
+  .row.note .n b { color: var(--gold); font-family: "Oswald", sans-serif; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; font-size: .9em; margin-right: 6px; }
+  .flavors .plus { color: var(--price); font-weight: 700; font-size: .86em; margin-left: 4px; }
+  .flavors .plus sup { font-size: .55em; vertical-align: top; position: relative; top: .14em; }
+  .flavors .sub-h { flex-basis: 100%; font-family: "Oswald", sans-serif; font-weight: 500; font-size: .7em; letter-spacing: .2em; text-transform: uppercase; color: var(--gold); margin-top: calc(6px * var(--fs)); }
+  .flavors .sub-h::before { content: none; }
+  .row.sub .n { font-weight: 500; color: #efe4d4; padding-left: 18px; }
+  .row.note .n, .row.note .price { font-size: calc(20px * var(--fs)); font-weight: 500; color: var(--ivory-3); }
+  .row.hot .n { color: #fff; } .row.hot .price { color: #ff6a55; }
+  .row .lbl { font-family: "Oswald", sans-serif; font-weight: 500; font-size: .56em; letter-spacing: .14em; color: var(--gold); margin: 0 5px 0 12px; text-transform: uppercase; }
+  .row .lbl:first-child { margin-left: 0; }
+  .row.wide .price { grid-column: 1 / -1; text-align: left; margin-top: 2px; }
+  /* 86'd for today (tablet): name dims, SOLD OUT tag where the price was. */
+  .row.out .n, .row.out .d { opacity: .45; }
+  .out-tag { display: inline-block; font-family: "Oswald", sans-serif; font-weight: 600; font-size: .6em; letter-spacing: .14em;
+    text-transform: uppercase; color: #fff; background: var(--tomato); padding: .12em .5em .08em; border-radius: 4px; white-space: nowrap; }
+  .tbl .row .out-tag { font-size: .5em; letter-spacing: .08em; }
+  /* A price that just changed on the tablet pulses three times, then sits still. */
+  .row.pchanged .price { animation: pglow 2.4s ease 3; }
+  @keyframes pglow { 50% { color: #fff; text-shadow: 0 0 18px var(--gold); } }
+
+  /* Price table (Classics): MED / LG columns */
+  .tbl .head { display: grid; grid-template-columns: minmax(0, 1fr) calc(78px * var(--fs)) calc(78px * var(--fs)); margin-top: calc(10px * var(--fs)); }
+  .tbl .head span { font-family: "Oswald", sans-serif; font-weight: 500; font-size: calc(17px * var(--fs)); letter-spacing: .2em; color: var(--gold); text-align: right; text-transform: uppercase; }
+  .tbl .rows { margin-top: 0; }
+  .tbl .row { grid-template-columns: minmax(0, 1fr) calc(78px * var(--fs)) calc(78px * var(--fs)); }
+  .tbl .row .price.one { grid-column: 2 / 4; }
+
+  .tops { margin-top: calc(10px * var(--fs)); font-size: calc(21px * var(--fs)); line-height: 1.22; color: var(--ivory-2); font-weight: 500; }
+  .tops b { color: var(--ivory); font-weight: 700; font-size: 1.14em; }
+  .tops b .price, .tops .price { color: var(--price); }
+  .tops .sep { color: var(--green); margin: 0 7px; }
+  .tops .lbl { font-family: "Oswald", sans-serif; font-weight: 500; font-size: .62em; letter-spacing: .14em; color: var(--gold); margin: 0 5px 0 14px; text-transform: uppercase; }
+  .tops-h { font-family: "Oswald", sans-serif; font-weight: 500; font-size: calc(16px * var(--fs)); letter-spacing: .2em; text-transform: uppercase; color: var(--gold); margin: calc(10px * var(--fs)) 0 calc(2px * var(--fs)); }
+
+  .sizes { display: flex; flex-wrap: wrap; gap: 0 calc(18px * var(--fs)); margin-top: calc(10px * var(--fs)); }
+  .sizes span { font-weight: 700; font-size: calc(30px * var(--fs)); white-space: nowrap; color: var(--price); }
+  .sizes em { font-style: normal; font-family: "Oswald", sans-serif; font-weight: 500; font-size: .56em; letter-spacing: .16em; color: var(--gold); margin-right: 6px; text-transform: uppercase; }
+  .flavors { margin-top: calc(6px * var(--fs)); display: flex; flex-wrap: wrap; gap: calc(3px * var(--fs)) calc(16px * var(--fs)); font-weight: 600; font-size: calc(25px * var(--fs)); line-height: 1.12; }
+  .flavors span { white-space: nowrap; }
+  .flavors span::before { content: "\2022"; color: var(--green); margin-right: 7px; }
+
+  /* =====================================================================
+     HERO (left). The only part of the board that moves.
+     ===================================================================== */
+  .hero { position: absolute; left: 0; top: 0; bottom: 0; width: 490px; overflow: hidden;
+    display: flex; flex-direction: column;
+    background: linear-gradient(180deg, #0f0d0b 0%, #171310 46%, #0d0b0a 100%);
+    box-shadow: 1px 0 0 var(--rule), 24px 0 60px rgba(0, 0, 0, .35); }
+  /* Key light from the top left and the "table" the food sits on. */
+  .hero::before { content: ""; position: absolute; left: -160px; top: -60px; width: 860px; height: 760px; pointer-events: none;
+    background: radial-gradient(closest-side, rgba(255, 196, 128, .17), rgba(255, 170, 100, .06) 55%, transparent 75%); }
+  .hero-logo { position: relative; z-index: 3; height: 108px; flex: none; }
+  .hero-logo img { position: absolute; left: 18px; top: 10px; width: 150px; height: auto; filter: drop-shadow(0 8px 18px rgba(0, 0, 0, .7)); }
+
+  .slides { position: relative; flex: 1; min-height: 0; }
+  .slide { position: absolute; inset: 0; display: flex; flex-direction: column; opacity: 0; pointer-events: none; }
+  .slide.on { opacity: 1; }
+  .slide.out { opacity: 0; transition: opacity 1.1s ease; }
+
+  .art { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  .plate { position: relative; flex: none; }
+  .plate img { display: block; width: 100%; height: auto; position: relative; z-index: 1;
+    filter: drop-shadow(0 30px 34px rgba(0, 0, 0, .6)) saturate(1.08) contrast(1.05); }
+  /* Soft contact shadow so the food sits on something instead of floating. */
+  .plate::before { content: ""; position: absolute; left: 6%; right: 6%; bottom: -5%; height: 16%;
+    background: radial-gradient(closest-side, rgba(0, 0, 0, .7), transparent); filter: blur(8px); }
+  /* One light sweep across the food as it arrives (shaped by the photo itself). */
+  .sweep { position: absolute; inset: 0; z-index: 2; opacity: 0;
+    background: linear-gradient(105deg, transparent 42%, rgba(255, 236, 205, .5) 50%, transparent 58%) no-repeat;
+    background-size: 300% 100%; background-position: 120% 0;
+    -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
+
+  .copy { flex: none; padding: 0 28px 0 36px; position: relative; z-index: 2; }
+  .eyebrow { font-family: "Oswald", sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: .3em;
+    color: var(--green); font-size: 18px; display: flex; align-items: center; gap: 16px; white-space: nowrap; }
+  .eyebrow::after { content: ""; flex: 1; max-width: 120px; height: 1px; background: linear-gradient(90deg, var(--gold), transparent); }
+  .eyebrow .badge { background: var(--green); color: #fff; letter-spacing: .2em; padding: 4px 10px 3px 12px; border-radius: 3px; font-size: 16px; }
+  .title { font-family: "Playfair Display", Georgia, serif; font-weight: 900; font-style: italic; font-size: 66px;
+    line-height: .95; letter-spacing: -.012em; color: var(--ivory); margin-top: 10px; text-shadow: 0 6px 34px rgba(0, 0, 0, .55); }
+  .desc { font-size: 24px; color: var(--ivory-2); margin-top: 12px; font-weight: 500; line-height: 1.2; }
+  .pricebar { display: flex; align-items: center; gap: 18px; margin-top: 12px; }
+  .pricebar i { display: block; width: 46px; height: 3px; background: var(--green); transform-origin: left center; }
+  .pricebar .price { font-size: 78px; line-height: 1; color: var(--ivory); }
+  .pricebar .price sup { color: var(--price); }
+  .pricebar small { font-family: "Oswald", sans-serif; font-weight: 500; font-size: 19px; letter-spacing: .2em; text-transform: uppercase; color: var(--gold); }
+
+  /* Type-only promo (a special with no real photo yet): price medallion */
+  .medal { width: 250px; height: 250px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 34% 28%, #e85a47, var(--green) 48%, #972a1e);
+    box-shadow: 0 26px 60px rgba(0, 0, 0, .6), inset 0 0 0 3px rgba(255, 255, 255, .13), 0 0 0 7px rgba(216, 171, 105, .34); color: #fff; }
+  .medal .price { font-size: 96px; line-height: 1; }
+  .medal small { font-family: "Oswald", sans-serif; font-weight: 500; font-size: 19px; letter-spacing: .26em; text-transform: uppercase; margin-top: 6px; opacity: .9; }
+  /* Brand card (Boar's Head, Ludwig's logo, QR codes) */
+  .brandart { width: 430px; }
+  .brandart img { display: block; width: 100%; height: auto; filter: drop-shadow(0 12px 26px rgba(0, 0, 0, .6)); }
+
+  /* ---- the 12 second sequence. Everything is opacity / transform. ---- */
+  /*
+   * The sequence. The food, the name and the price are there from the
+   * first frame of a promo (they come in together with the cross-fade),
+   * so a glance at any moment reads as a finished ad. Only the light
+   * sweep, the red line and the slow push-in happen afterwards.
+   * Everything is opacity / transform.
+   */
+  .slide.on { animation: fadein .9s ease both; }
+  .slide.on .plate, .slide.on .medal, .slide.on .brandart, .slide.on .clip { animation: arrive 1.1s var(--ease) both; }
+  .slide.on .zoom { animation: pushin var(--dur, 12s) linear both; }
+  .slide.on .sweep { animation: sweep 1.5s ease-in-out .9s both; }
+  /* Photo first, then the words drop in: eyebrow, name, description, price. */
+  .slide.on .eyebrow { animation: drop .7s var(--ease) 1.1s both; }
+  .slide.on .title { animation: drop .8s var(--ease) 1.3s both; }
+  .slide.on .desc { animation: drop .7s var(--ease) 1.55s both; }
+  .slide.on .pricebar { animation: drop .8s var(--ease) 1.8s both; }
+  .slide.on .pricebar i { animation: draw .7s var(--ease) 2.4s both; }
+  /* Power-on frame: no animation at all, so it cannot sit invisible while
+     a slow or background browser waits to run its first animation frame. */
+  .slide.on.snap, .slide.on.snap * { animation: none !important; }
+  /* Once a promo has faded in, drop the fade so it can never be left half-way. */
+  .slide.on.settled { animation: none; }
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes arrive { from { transform: translateY(14px) scale(.965); } to { transform: none; } }
+  @keyframes pushin { from { transform: scale(1); } to { transform: scale(1.06); } }
+  @keyframes sweep { 0% { opacity: 1; background-position: 120% 0; } 99% { opacity: 1; background-position: -20% 0; } 100% { opacity: 0; background-position: -20% 0; } }
+  @keyframes rise { from { transform: translateY(12px); } to { transform: none; } }
+  @keyframes drop { from { opacity: 0; transform: translateY(-26px); } to { opacity: 1; transform: none; } }
+  @keyframes draw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+  /*
+   * Video promo. The still photo is always underneath and always
+   * visible; the clip only fades in over it once it is really playing,
+   * and fades back out if it stalls or fails. Nobody ever sees a black
+   * box or a spinner.
+   */
+  .clip { position: absolute; left: 0; right: 0; top: -108px; bottom: 0; overflow: hidden; background: #0f0d0b; }
+  .clip img, .clip video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: var(--focus, 50% 50%); display: block; }
+  .clip video { opacity: 0; transition: opacity .7s ease; }
+  .slide.on .clip.photo > img:first-child { animation: pushin 11s linear both; transform-origin: 50% 45%; }
+  /* A brand logo on a photo scene (e.g. Proudly Featuring Boar's Head):
+     sits low on the photo and drops in just before the name. */
+  .clip .clip-logo { position: absolute; inset: auto auto 26px 34px; width: 270px; height: auto; object-fit: contain; z-index: 2;
+    filter: drop-shadow(0 6px 18px rgba(0, 0, 0, .8)); }
+  .slide.on .clip .clip-logo { animation: drop .7s var(--ease) .9s both; }
+  /* Photo credit, required by CC BY licences: small and quiet in the corner. */
+  .clip .clip-credit { position: absolute; right: 12px; bottom: 8px; z-index: 2; font-family: "Barlow Semi Condensed", sans-serif;
+    font-size: 13px; letter-spacing: .02em; color: rgba(244, 236, 221, .5); text-shadow: 0 1px 3px rgba(0, 0, 0, .8); }
+  @keyframes pushin { from { transform: scale(1.0); } to { transform: scale(1.09); } }
+  .clip video.live { opacity: 1; }
+  .clip::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(180deg, rgba(15, 13, 11, .62) 0%, transparent 20%, transparent 66%, #14110f 100%); }
+  .slide.has-clip .art { align-items: stretch; }
+
+  /*
+   * Feature scene (feature: "bh"): Ludwig's x Proudly Featuring Boar's Head.
+   * Dark photo with a slow push-in, gold embers rising, Ludwig's logo drops in,
+   * a gold rule draws, the Boar's Head lockup lands from blur to sharp, then a
+   * gold light sweeps across it every few seconds. The lockup is never split
+   * or recolored (brand mark stays intact). Everything is opacity / transform.
+   */
+  .feat { position: absolute; left: 0; right: 0; top: -108px; bottom: 0; z-index: 4; display: flex; flex-direction: column;
+    align-items: center; justify-content: flex-start; padding-top: 6px; pointer-events: none; }
+  .feat-glow { position: absolute; left: 50%; top: 40px; width: 620px; height: 400px; margin-left: -310px; opacity: 0;
+    background: radial-gradient(closest-side, rgba(255, 190, 90, .30), rgba(216, 171, 105, .10) 55%, transparent 78%); }
+  .feat-rocco { width: 330px; margin-bottom: -26px; height: auto; position: relative; filter: drop-shadow(0 10px 26px rgba(0, 0, 0, .85)); }
+  .feat-rule { position: relative; display: flex; align-items: center; gap: 12px; width: 360px; margin: 6px 0 14px; }
+  .feat-rule i { flex: 1; height: 2px; background: linear-gradient(90deg, transparent, var(--gold)); transform-origin: right center; }
+  .feat-rule i + b + i { background: linear-gradient(90deg, var(--gold), transparent); transform-origin: left center; }
+  .feat-rule b { width: 9px; height: 9px; background: var(--gold); transform: rotate(45deg); box-shadow: 0 0 14px rgba(255, 200, 110, .9); }
+  .feat-bh { position: relative; width: 410px; }
+  .feat-bh img { display: block; width: 100%; height: auto; filter: drop-shadow(0 8px 22px rgba(0, 0, 0, .9)); }
+  .feat-bh .shine { position: absolute; inset: 0; opacity: 0;
+    background: linear-gradient(105deg, transparent 40%, rgba(255, 226, 160, .95) 50%, transparent 60%) no-repeat;
+    background-size: 300% 100%; background-position: 120% 0;
+    -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
+  .embers { position: absolute; inset: 0; overflow: hidden; z-index: 1; pointer-events: none; }
+  .embers span { position: absolute; bottom: -10px; width: var(--s, 4px); height: var(--s, 4px); border-radius: 50%; opacity: 0;
+    background: radial-gradient(circle, #ffe4a8 0%, #f0a640 45%, rgba(240, 120, 40, 0) 72%); }
+  .slide.feature .clip::after { background: linear-gradient(180deg, rgba(10, 8, 7, .78) 0%, rgba(10, 8, 7, .55) 45%, transparent 66%, #14110f 100%); }
+  .slide.feature.on .feat-glow { animation: fadein 1.2s ease .3s both, glow 4s ease-in-out 1.5s infinite; }
+  .slide.feature.on .feat-rocco { animation: drop .9s var(--ease) .4s both; }
+  .slide.feature.on .feat-rule i { animation: draw .8s var(--ease) 1.1s both; }
+  .slide.feature.on .feat-rule b { animation: pop .5s var(--ease) 1.2s both; }
+  .slide.feature.on .feat-bh { animation: land 1.1s var(--ease) 1.5s both; }
+  .slide.feature.on .feat-bh .shine { animation: shine 4s ease-in-out 2.7s infinite; }
+  .slide.feature.on .embers span { animation: ember var(--t, 6s) linear var(--d, 0s) infinite; }
+  .slide.feature.on .eyebrow { animation-delay: 2.6s; }
+  .slide.feature.on .title { animation-delay: 2.8s; }
+  .slide.feature.on .desc { animation-delay: 3.05s; }
+  /* Ludwig's logo is already in the scene, so the corner logo steps aside. */
+  .hero-logo img { transition: opacity .8s ease; }
+  .hero:has(.slide.feature.on) .hero-logo img, .hero:has(.slide.logo-card.on) .hero-logo img { opacity: 0; }
+  @keyframes glow { 50% { transform: scale(1.12); opacity: .7; } }
+  @keyframes pop { from { transform: rotate(45deg) scale(0); } to { transform: rotate(45deg) scale(1); } }
+  @keyframes land { 0% { opacity: 0; transform: scale(1.3); filter: blur(14px); } 60% { opacity: 1; filter: blur(0); } 100% { opacity: 1; transform: none; filter: none; } }
+  @keyframes shine { 0% { opacity: 1; background-position: 120% 0; } 40% { opacity: 1; background-position: -20% 0; } 41%, 100% { opacity: 0; background-position: -20% 0; } }
+  @keyframes ember { 0% { opacity: 0; transform: translate(0, 0); } 12% { opacity: .95; } 80% { opacity: .55; }
+    100% { opacity: 0; transform: translate(var(--x, 20px), -820px); } }
+  /* Ludwig's brand card: the logo plus a line of words. */
+  .wordmark { text-align: center; }
+  .wordmark img { display: block; width: 360px; height: auto; margin: 0 auto; filter: drop-shadow(0 16px 34px rgba(0, 0, 0, .7)); }
+  .wordmark b { display: block; font-family: "Playfair Display", Georgia, serif; font-style: italic; font-weight: 900; font-size: 104px; line-height: .9; color: var(--ivory); text-shadow: 0 10px 40px rgba(0, 0, 0, .6); }
+  .wordmark span { display: block; margin-top: 14px; font-family: "Oswald", sans-serif; font-weight: 600; font-size: 30px; letter-spacing: .5em; margin-right: -.5em; text-transform: uppercase; color: var(--gold); }
+  .slide.on .wordmark { animation: arrive 1.1s var(--ease) both; }
+
+  /* Rotation ticks: one per promo, the lit one is on screen.
+     Hidden Nov 21 (Brian: lose the lines). Delete "display: none" to bring them back. */
+  .ticks { flex: none; display: none; gap: 8px; padding: 20px 36px 0; height: 40px; }
+  .ticks i { flex: 1; max-width: 46px; height: 3px; border-radius: 2px; background: rgba(255, 245, 233, .16); transition: background .6s ease; }
+  .ticks i.on { background: var(--gold); }
+
+  /* Today card: always on screen, never part of the rotation. */
+  .today { flex: none; margin: 0 24px 22px; padding: 16px 22px 16px; background: var(--surface);
+    border-left: 5px solid var(--green); border-radius: 0 4px 4px 0; box-shadow: 0 12px 30px rgba(0, 0, 0, .4); position: relative; z-index: 3; }
+  .today .k { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 16px; letter-spacing: .26em; text-transform: uppercase; color: var(--green); }
+  .today .t { font-weight: 700; font-size: 30px; line-height: 1.1; margin-top: 5px; display: flex; justify-content: space-between; align-items: baseline; gap: 14px; }
+  .today .t .price { color: var(--price); font-size: 32px; }
+  .today .s { font-size: 20px; color: var(--ivory-3); margin-top: 3px; font-weight: 500; line-height: 1.2; }
+  .today .s.banner { color: var(--ivory); margin-top: 8px; }
+  .today .phone { margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--rule); display: flex; justify-content: space-between; align-items: baseline;
+    font-family: "Oswald", sans-serif; letter-spacing: .18em; text-transform: uppercase; font-size: 15px; color: var(--ivory-3); }
+  .today .phone:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  /* Key for the stars in the menu: Ludwig's favorites (none picked yet). */
+  .today .favkey { margin-top: 10px; font-family: "Oswald", sans-serif; font-weight: 500; font-size: 17px; letter-spacing: .22em;
+    text-transform: uppercase; color: var(--gold); }
+  .eyebrow .favstar { color: var(--green); font-weight: 400; letter-spacing: 0; margin-right: 2px; }
+  .today .favkey span { color: var(--green); letter-spacing: 0; margin-right: 4px; }
+  .today .phone b { font-family: "Barlow SC", sans-serif; letter-spacing: .01em; font-size: 30px; color: var(--ivory); font-weight: 700; }
+
+
+  /* =====================================================================
+     SHOWTIME: a full-screen video takeover. Every few minutes one 9 s
+     reel (1920x1080, cut and graded offline from 4K sources) fills the
+     whole TV, then the menu comes straight back. The two TVs take turns
+     so one menu is always readable. The layer only appears once the
+     reel is really playing; if it cannot play, nothing changes.
+     ===================================================================== */
+  .show { position: absolute; inset: 0; z-index: 50; background: #0b0908; opacity: 0; pointer-events: none;
+    transition: opacity .7s ease; }
+  .show.on { opacity: 1; }
+  .show video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+  .show .shade { position: absolute; inset: 0;
+    background: linear-gradient(0deg, rgba(10, 8, 7, .92) 0%, rgba(10, 8, 7, .55) 26%, transparent 48%),
+                linear-gradient(180deg, rgba(10, 8, 7, .55) 0%, transparent 18%); }
+  .show .logo { position: absolute; left: 48px; top: 30px; width: 320px; height: auto; filter: drop-shadow(0 8px 22px rgba(0, 0, 0, .7)); }
+  .show .words { position: absolute; left: 96px; right: 96px; bottom: 82px; display: flex; align-items: flex-end; justify-content: space-between; gap: 40px; }
+  .show .eyebrow { font-size: 24px; letter-spacing: .42em; }
+  .show .eyebrow::after { max-width: 200px; }
+  .show .big { font-family: "Playfair Display", Georgia, serif; font-weight: 900; font-style: italic; font-size: 150px; line-height: .92;
+    letter-spacing: -.015em; color: var(--ivory); margin-top: 14px; text-shadow: 0 10px 50px rgba(0, 0, 0, .7); white-space: nowrap; }
+  .show .line { width: 120px; height: 5px; background: var(--green); margin-top: 26px; transform-origin: left center; }
+  .show .call { text-align: right; font-family: "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .24em; font-size: 20px; color: var(--gold); flex: none; }
+  .show .call b { display: block; font-family: "Barlow SC", sans-serif; letter-spacing: .01em; font-size: 54px; color: var(--ivory); font-weight: 700; margin-top: 4px; }
+  /* Split layout: a single tall clip on the left, the words on the right. */
+  .show.split .shade { background: linear-gradient(90deg, transparent 0%, transparent 34%, rgba(15, 13, 11, .0) 39.6%, #0f0d0b 40%); }
+  .show.split .words { left: 860px; right: 90px; top: 0; bottom: 0; flex-direction: column; align-items: flex-start; justify-content: center; gap: 70px; }
+  .show.split .big { font-size: 128px; white-space: normal; }
+  .show.split .call { text-align: left; }
+  .show.split .logo { left: auto; right: 70px; }
+  .show.on .eyebrow, .show.on .big { animation: rise 1s var(--ease) .25s both; }
+  .show.on .line { animation: draw .8s var(--ease) .8s both; }
+  .show.on .call { animation: rise 1s var(--ease) .45s both; }
+  .show.on video { animation: settle 9s linear both; }
+  @keyframes settle { from { transform: scale(1.045); } to { transform: scale(1); } }
+
+  /* Still mode (&motion=0 or the device asks for reduced motion) */
+  .stage.still .slide.on, .stage.still .slide.on * { animation: none !important; }
+  .stage.still .slide.out { transition: none; }
+  .stage.still .row.pchanged .price { animation: none; }
+
+  #diag { position: absolute; left: 10px; bottom: 10px; z-index: 99; background: #ff0; color: #000; font: bold 20px monospace; padding: 8px 10px; }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="env"></div>
+  <div class="hero" id="hero">
+    <div class="hero-logo"><img id="logo" alt="" onerror="this.style.display='none'"></div>
+    <div class="slides" id="slides"></div>
+    <div class="ticks" id="ticks"></div>
+    <div class="today" id="today"></div>
+  </div>
+  <div class="menu" id="menu"></div>
+  <div class="show" id="show"></div>
+</div>
+<script src="../signage.js?v=5"></script>
+<script>
+(function () {
+  "use strict";
+  const IMG = "../img/";               // real photos and logos, shared by both TVs
+  const LOGO = IMG + "ludwigs-logo.png"; // keyed from Ludwig's own board art
+  const PHONE = "610-458-0700";
+  const PROMO_SECONDS = 10; const SLOT_MINUTES = 10;            // default time on screen per promo
+  const FS_FLOOR = 0.9;                // below this the board is flagged "small"
+  const PAD_BASE = 5, PAD_MIN = 2, PAD_MAX = 16; // row spacing (px above and below each row)
+  const params = new URLSearchParams(location.search);
+  const tv = String(params.get("tv") || "1") === "2" ? 2 : 1;
+  const DEBUG = params.get("debug") === "1";
+  const VIDEO_DIR = "video/";          // clips live in boards/v1/video
+  const VIDEO_OFF = params.get("video") === "0";
+  const PIN = params.get("promo") || "";                 // hold one promo (preview / freeze)
+  const weekday = () => Number(params.get("day")) || RS.weekday();   // &day= is for previews only
+  const STILL = params.get("motion") === "0" ||
+    (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+
+  /*
+   * PROMOS: what the window (left panel) can show. One entry per scene.
+   *   id        unique name
+   *   tv        1, 2, or leave out for both
+   *   type      signature (evergreen) | daily (today's special) | brand
+   *   eyebrow, title, desc   the words (desc is optional)
+   *   photo     full-bleed photo in boards/img, 980x1531 portrait JPG
+   *   focus     which part of the photo to keep, "across down" ("50% 40%")
+   *   photos    ["a.jpg", "b.jpg"] = next photo each time round
+   *   brandImg  a centered card in boards/img (logo, QR code)
+   *   video, poster, footage, approved, brandTitle   see the Rocco's notes:
+   *             a stock clip is ALWAYS an unpriced brand spot.
+   *   priceId   Sheet ID. The price always comes from the feed.
+   *   size      for multi-size prices: which size to show ("Large")
+   *   label     small word after the price ("Large 16″")
+   *   days, hours, from, until, seconds, priority, slot, enabled
+   *   feature   "bh" = animated Proudly Featuring Boar's Head tile (needs photo)
+   * A scene is skipped (never shown broken) when it is out of schedule,
+   * its photo did not load, or its item has no price or was removed.
+   *
+   * Phase 1 (Nov 23): words and logos only, no food photos yet. Every line
+   * below is Ludwig's own copy (their board, their site).
+   */
+  const PROMOS = [
+    { id: "bake-at-home", tv: 1, type: "signature", eyebrow: "Bake-at-Home", title: "Fresh & Local",
+      desc: "All natural. No additives, no preservatives, nothing artificial.", brandImg: "ludwigs-logo.png", art: { w: 330 } },
+    { id: "since-1998", type: "signature", eyebrow: "Since 1998", title: "Fine Foods & Catering",
+      desc: "Serving upper Chester County", brandImg: "ludwigs-logo.png", art: { w: 330 } },
+    { id: "bh-card", tv: 2, type: "signature", eyebrow: "Ludwig’s Deli", title: "Only the Best",
+      brandImg: "boars-head-pf-white.png", art: { w: 420 } }
+  ];
+  // Always available, needs nothing from the network but the logo.
+  const BRAND_CARD = { id: "ludwigs", type: "brand", eyebrow: "Village Market & Catering", title: PHONE, wordmark: true };
+
+  /** A stock clip that Ludwig's has not approved for an exact item is a brand spot. */
+  const isBrandSpot = p => !!p.video && p.footage === "stock" && p.approved !== true;
+  /** A clip's still: its poster (in v1/video, beside the clip) or its photo (boards/img). */
+  const stillSrc = p => p.poster ? VIDEO_DIR + p.poster : (p.img ? IMG + p.img : "");
+
+  /*
+   * BOARDS. Section types: rows (default), tbl (price table with columns),
+   * inline (names sharing one price, e.g. strombolis).
+   * Section: h = header, meta = small gold line, sizes = Sheet ID of one
+   * price that covers every row in the section (specialty pizzas).
+   * Items: n = name, ids = Sheet IDs, no = sandwich number, d = small line,
+   * add = [Sheet ID, "Add Chicken"] add-on shown after the description,
+   * note = small grey line, np = no price (shown without one).
+   *
+   * Every item from Ludwig's menus is here. IDs: L001 to L099.
+   */
+  const SPEC = "L007";   // one price for every specialty pizza (Small / Large)
+  const BOARDS = {
+    1: {
+      cols: "minmax(0,.92fr) minmax(0,1.06fr) minmax(0,1.06fr)",
+      columns: [
+        [
+          { h: "Build Your Own", meta: "Three Cheese Pizza: white cheddar, mozzarella & parmesan", items: [
+            { n: "Small 10″", ids: ["L001"] },
+            { n: "Large 16″", ids: ["L002"] },
+            { n: "Boardwalk Extra Thin 16″", ids: ["L003"] }
+          ]},
+          { h: "Toppings", type: "tops" },
+          { h: "Special Crusts", meta: "Also for specialty pizzas", items: [
+            { n: "Whole Grain", ids: ["L005"], plus: 1 },
+            { n: "Gluten Free", ids: ["L006"], plus: 1, d: "Small only" }
+          ]}
+        ],
+        [
+          { h: "White Pizzas", sizes: SPEC, meta: "Our blend of olive oil & garlic", items: [
+            { n: "Mikinos Spinach", ids: ["L010"], np: 1, d: "Spinach, roasted peppers, black olives, feta, pine nuts" },
+            { n: "Mediterranean", ids: ["L011"], np: 1, d: "Spinach, artichoke hearts, plum tomatoes, pine nuts, black olives, feta" },
+            { n: "Veggie Lovers", ids: ["L012"], np: 1, d: "Your choice of four fresh vegetables" },
+            { n: "Spinach Quattro", ids: ["L013"], np: 1, d: "Spinach, ricotta, plum tomatoes, pine nuts" },
+            { n: "Heart’s Contents", ids: ["L014"], np: 1, d: "Mushrooms, artichoke hearts, plum tomatoes, onions, pine nuts" },
+            { n: "Primo Prosciutto", ids: ["L015"], np: 1, d: "Prosciutto, fresh mozzarella, onions, sundried & plum tomatoes" },
+            { n: "Clams Casino", ids: ["L016"], np: 1, d: "Chopped clams, mixed bell peppers, crispy bacon" },
+            { n: "Greek", ids: ["L017"], np: 1, d: "Spinach, kalamata olives, plum tomatoes, feta" },
+            { n: "Portobello Special", ids: ["L018"], np: 1, d: "Portobello mushrooms, spinach, red onions, sundried tomatoes, feta" },
+            { n: "Margherita", ids: ["L019"], np: 1, d: "Fresh mozzarella, fresh basil, plum tomatoes. White or red sauce" },
+            { n: "Nantucket Chicken", ids: ["L020"], np: 1, d: "Roasted garlic, grilled chicken, red onion, cranberries, blue cheese" }
+          ]}
+        ],
+        [
+          { h: "Red Pizzas", sizes: SPEC, meta: "Our homemade tomato sauce", items: [
+            { n: "Italian", ids: ["L021"], np: 1, d: "Sausage, mixed bell peppers, roasted peppers, onions, plum tomatoes" },
+            { n: "Bacon Burger", ids: ["L022"], np: 1, d: "Ground beef, plum tomatoes, crispy bacon, extra cheddar" },
+            { n: "Meat Lovers", ids: ["L023"], np: 1, d: "Pepperoni, ground beef, sausage, crispy bacon" },
+            { n: "Buffalo Chicken", ids: ["L024"], np: 1, d: "Grilled chicken, hot wing sauce, celery, crumbled blue cheese" },
+            { n: "Barbecue Chicken", ids: ["L025"], np: 1, d: "Grilled chicken, red onions, crispy bacon, homemade sweet Vidalia BBQ sauce" },
+            { n: "Hawaiian", ids: ["L026"], np: 1, d: "Ham, pineapple, mixed bell peppers, pine nuts, plum tomatoes" },
+            { n: "Chicken Fajita", ids: ["L027"], np: 1, d: "Grilled chicken, red onions, mixed bell peppers, long hots, plum tomatoes" },
+            { n: "Taco", ids: ["L028"], np: 1, d: "Ground beef, onions, mixed bell & roasted peppers, black olives, plum tomatoes" },
+            { n: "Roasted Pepperoni", ids: ["L029"], np: 1, d: "Roasted pepperoni, pepperoni, mushrooms, red onion, sausage" }
+          ]},
+          { h: "Special Sauces", items: [
+            { n: "Spinach Pesto", ids: ["L030"], np: 1, d: "Pesto sauce, spinach, grilled chicken, ricotta, sundried tomatoes" },
+            // TODO (Brian): the TV board's Veggie Pesto line is a copy of the
+            // Margherita, and the section is cut off below it. Real text pending.
+            { n: "Veggie Pesto", ids: ["L031"], np: 1 }
+          ]}
+        ]
+      ]
+    },
+    2: {
+      cols: "minmax(0,1.08fr) minmax(0,1.1fr) minmax(0,.82fr)",
+      columns: [
+        [
+          { h: "Sandwiches", items: [
+            { no: 1, n: "The Classics", ids: ["L040"], d: "Turkey, roast beef, ham, chicken or turkey salad. Cheese, lettuce, tomato, onion" },
+            { no: 2, n: "The Italian", ids: ["L041"], d: "Peppered ham, Genoa salami, deluxe ham, soppressata, pepperoni, sharp provolone" },
+            { no: 3, n: "Sicilian Tuna", ids: ["L042"], d: "Tuna salad, roasted peppers, sautéed spinach, sharp provolone" },
+            { no: 4, n: "Portobello Special", ids: ["L043"], d: "Roasted peppers, fresh mozzarella, sautéed spinach, roasted red onion mayo", add: ["L057", "Add Chicken"] },
+            { no: 5, n: "Primo Prosciutto", ids: ["L044"], d: "Fresh mozzarella, roasted peppers, sprouts, basil pesto" },
+            { no: 6, n: "Avocado BLT", ids: ["L045"], d: "Roasted garlic cilantro spread" },
+            { no: 7, n: "Calabrese", ids: ["L046"], d: "Fresh mozzarella, tomato, fresh basil, leaf lettuce, sweet balsamic", add: ["L057", "Add Chicken"] },
+            { no: 8, n: "House Roasted Turkey", ids: ["L047"], d: "Baby Swiss, baby greens, tomato, cranberry relish" },
+            { no: 9, n: "The Tuscany", ids: ["L048"], d: "Cucumber, feta, red onion, roasted peppers, spinach, hummus, pine nuts, pita", add: ["L057", "Add Chicken"] },
+            { no: 10, n: "House Smoked Salmon", ids: ["L049"], d: "Avocado, sprouts, lemon apricot spread" },
+            { no: 11, n: "Pastrami Special", ids: ["L050"], d: "Baby Swiss, cole slaw, Russian dressing on rye" },
+            { no: 12, n: "Thai Chicken", ids: ["L051"], d: "Shredded cabbage, snow peas, sprouts, pita" }
+          ]}
+        ],
+        [
+          { h: "Hot Sandwiches", items: [
+            { no: 13, n: "Four Cheese Meatball", ids: ["L052"], d: "With our homemade tomato sauce" },
+            { no: 14, n: "The Hamchego", ids: ["L053"], d: "Tavern ham, Manchego cheese, fig spread" },
+            { no: 15, n: "The Black Angus", ids: ["L054"], d: "Au jus, horseradish cream, sharp provolone" },
+            { no: 16, n: "The Village Garden", ids: ["L055"], d: "Grilled eggplant, sautéed spinach, roasted peppers, tomato, provolone, olive tapenade" },
+            { no: 17, n: "Abruzzi Chicken", ids: ["L056"], d: "Italian chicken tenders, Abruzzi cheese, strawberry habanero jam" },
+            { n: "<b>Extras</b> Roasted peppers, hot peppers, sweet peppers, pickles, cole slaw", ids: ["L058"], np: 1, note: 1, html: 1 }
+          ]},
+          { h: "Strombolis", type: "inline", sizes: "L060", strip: "Any", up: "L061", meta: "Pre-made & frozen", groups: [
+            ["Meat", [
+              { n: "Pepperoni", ids: ["L062"] }, { n: "Cheesesteak", ids: ["L063"] },
+              { n: "Chicken & Broccoli", ids: ["L064"], up: 1 }, { n: "Sausage, Onion & Pepper", ids: ["L065"] },
+              { n: "Ham & Cheese", ids: ["L066"] }, { n: "Meatball", ids: ["L067"] }, { n: "Italian", ids: ["L068"] },
+              { n: "Buffalo Chicken", ids: ["L069"] }, { n: "Bacon & Egg", ids: ["L070"] }, { n: "Ham & Egg", ids: ["L071"] },
+              { n: "Whole Wheat Chicken & Broccoli", ids: ["L072"] }
+            ]],
+            ["Vegetable", [
+              { n: "Mushroom, Onion & Pepper", ids: ["L073"] }, { n: "Cheese & Sauce", ids: ["L074"] },
+              { n: "Spinach & Cheese", ids: ["L075"] }, { n: "Whole Wheat Spinach & Cheese", ids: ["L076"], up: 1 },
+              { n: "Veggie Sausage", ids: ["L077"], up: 1 }, { n: "Veggie Sausage & Vegan Cheese", ids: ["L078"], up: 1 }
+            ]]
+          ]}
+        ],
+        [
+          { h: "Italian Dinners", meta: "Available daily while supplies last", items: [
+            { n: "Italian Meatballs", ids: ["L080"], np: 1 },
+            { n: "Baked Ziti Parmesan", ids: ["L081"], np: 1 },
+            { n: "Eggplant Parmesan", ids: ["L082"], np: 1 },
+            { n: "Chicken Parmesan", ids: ["L083"], np: 1 },
+            { n: "Stuffed Pasta Shells", ids: ["L084"], np: 1 },
+            { n: "Cheese Tortellini", ids: ["L085"], np: 1, d: "With pesto & grilled chicken" },
+            { n: "Pasta & Meatballs", ids: ["L086"], np: 1 },
+            { n: "Beef Lasagna", ids: ["L087"], np: 1 },
+            { n: "Chicken Piccata", ids: ["L088"], np: 1 },
+            { n: "Chicken Saltimbocca", ids: ["L089"], np: 1 },
+            { n: "Chicken Florentine", ids: ["L090"], np: 1 },
+            { n: "Beef Bolognese", ids: ["L091"], np: 1 }
+          ]},
+          { h: "Pasta Specialties", meta: "Talluto’s brand pasta", items: [
+            { n: "Cheese Ravioli", ids: ["L092"] },
+            { n: "Crepe Manicotti", ids: ["L093"] },
+            { n: "Stuffed Shells", ids: ["L094"] },
+            { n: "Italian Meatballs", ids: ["L095"] }
+          ]}
+        ]
+      ]
+    }
+  };
+
+  const B = BOARDS[tv];
+  const esc = RS.esc;
+  const stage = document.getElementById("stage");
+  if (STILL) stage.classList.add("still");
+
+  /* =====================================================================
+     MENU DATA: add / remove from the tablet
+     ===================================================================== */
+  // Strombolis are listed in groups (Meat / Vegetable). Give the section a
+  // flat items list too, so add / remove / sold out treat them like any row.
+  Object.keys(BOARDS).forEach(k => BOARDS[k].columns.forEach(col => col.forEach(sec => {
+    if (sec.groups) sec.items = [].concat(...sec.groups.map(g => g[1]));
+  })));
+  // Items L001 to L099 were placed by hand. Only IDs above this were added
+  // on the tablet.
+  const LAST_BUILT_ID = 99;
+  const isTabletItem = id => { const m = /^L(\d+)$/.exec(String(id)); return !!m && Number(m[1]) > LAST_BUILT_ID; };
+  // Every ID on both boards, so an item on the other TV is never "new" here.
+  const KNOWN = new Set([SPEC, "L004", "L060", "L061"]);
+  Object.keys(BOARDS).forEach(k => BOARDS[k].columns.forEach(col => col.forEach(sec => {
+    if (sec.sizes) KNOWN.add(sec.sizes);
+    (sec.items || []).forEach(it => it.ids.forEach(id => KNOWN.add(id)));
+    (sec.items || []).forEach(it => { if (it.add) KNOWN.add(it.add[0]); });
+  })));
+
+  /** This board's columns with removed rows dropped and new items added. */
+  function liveColumns() {
+    const cat = {};
+    RS.items.forEach(it => { cat[it.id] = String(it.category || ""); });
+
+    const tally = {};
+    const cols = B.columns.map(col => col.map(sec => Object.assign({}, sec, { items: sec.items ? sec.items.slice() : sec.items })));
+    cols.forEach(col => col.forEach(sec => (sec.items || []).forEach(it => it.ids.forEach(id => {
+      const c = cat[id];
+      if (!c) return;
+      tally[c] = tally[c] || new Map();
+      tally[c].set(sec, (tally[c].get(sec) || 0) + 1);
+    }))));
+    const homeFor = c => {
+      const m = tally[c];
+      if (!m) return null;
+      return [...m.entries()].sort((a, b) => b[1] - a[1])[0][0];
+    };
+
+    RS.items.forEach(it => {
+      if (!isTabletItem(it.id) || KNOWN.has(it.id) || RS.isRemoved(it.id) || !it.item) return;
+      const sec = homeFor(String(it.category || ""));
+      if (!sec) return;
+      const row = { n: String(it.item).trim(), ids: [it.id] };
+      sec.items.push(row);
+      if (sec.groups) sec.groups = sec.groups.map((g, i) => i === sec.groups.length - 1 ? [g[0], g[1].concat(row)] : g);
+    });
+
+    const keep = it => !it.ids.length || !it.ids.every(RS.isRemoved);
+    return cols.map(col => col
+      .map(sec => {
+        if (!sec.items) return sec;
+        const out = Object.assign(sec, { items: sec.items.filter(keep) });
+        if (sec.groups) out.groups = sec.groups.map(g => [g[0], g[1].filter(keep)]).filter(g => g[1].length);
+        return out;
+      })
+      .filter(sec => !sec.items || sec.items.length));
+  }
+
+  /* =====================================================================
+     MENU DRAWING
+     ===================================================================== */
+  // Size words on the TV: "Small $13.00 / Large $21.95" -> SMALL 10" 13.00 ...
+  const SIZE_LABEL = { Small: "Small 10″", Large: "Large 16″", S: "Small", L: "Large" };
+  function sizesHtml(str) {
+    return String(str).split("/").map(part => {
+      const m = part.trim().match(/^([A-Za-z]+)\s+(.*)$/);
+      return m ? '<span class="lbl">' + esc(SIZE_LABEL[m[1]] || m[1]) + '</span>' + RS.money(m[2]) : RS.money(part.trim());
+    }).join("");
+  }
+  /** Section price strip: one price for every row below it. */
+  function stripHtml(id, label) {
+    const str = RS.price(id);
+    if (!str) return "";
+    return '<div class="sizes">' + str.split("/").map(part => {
+      const m = part.trim().match(/^([A-Za-z]+)\s+(.*)$/);
+      return '<span class="price">' + (m ? '<em>' + esc(SIZE_LABEL[m[1]] || m[1]) + '</em>' + RS.money(m[2])
+        : (label ? '<em>' + esc(label) + '</em>' : '') + RS.money(part)) + '</span>';
+    }).join("") + '</div>';
+  }
+  function priceHtml(it) {
+    if (it.np || !it.ids.length) return "";
+    const list = it.ids.map(id => RS.price(id)).filter(Boolean);
+    if (!list.length) return "";
+    const plus = it.plus ? "+" : "";
+    if (list.length > 1 && !list.every(x => x === list[0])) return list.map(RS.money).join(" / ");
+    return /\//.test(list[0]) ? sizesHtml(list[0]).replace(/<\/span>/g, "</span>" + plus) : plus + RS.money(list[0]);
+  }
+  const OUT_TAG = '<span class="out-tag">Sold out</span>';
+  const allOut = it => it.ids.length > 0 && it.ids.every(RS.isSoldOut);
+  function addHtml(it) {
+    if (!it.add) return "";
+    const p = RS.price(it.add[0]);
+    if (!p || RS.isSoldOut(it.add[0])) return "";
+    return ' <span class="add">' + esc(it.add[1]) + ' <span class="price">+' + RS.money(p) + '</span></span>';
+  }
+  function rowHtml(it) {
+    const out = allOut(it);
+    const raw = it.ids.map(id => RS.price(id)).join("|");
+    const wide = !out && !it.np && /\//.test(raw) && it.ids.length === 1;
+    const name = (it.no ? '<span class="no">#' + it.no + '</span>' : '') + (it.html ? it.n : esc(it.n));
+    const add = addHtml(it);
+    const desc = (it.d ? esc(it.d) + (add ? "." : "") : "") + add;
+    return '<div class="row' + (it.sub ? ' sub' : '') + (it.note ? ' note' : '') + (it.hot ? ' hot' : '') + (wide ? ' wide' : '') + (out ? ' out' : '') + '" data-ids="' + it.ids.join(",") + '">' +
+      '<div class="n">' + name + '</div>' +
+      '<div class="price">' + (out ? OUT_TAG : priceHtml(it)) + '</div>' +
+      (desc ? '<div class="d">' + desc + '</div>' : '') + '</div>';
+  }
+  function secHtml(sec) {
+    let body = "";
+    if (sec.type === "tops") {
+      // Toppings: price per topping, then the full list from Ludwig's board.
+      body = '<div class="tops"><b>Each ' + sizesHtml(RS.price("L004")).replace(/<span class="lbl">/g, '<span class="lbl">') + '</b>' +
+        '<div class="tops-h">Veggies &amp; Cheeses</div>' +
+        'Spinach, artichoke hearts, arugula, asiago, asparagus, black olives, blue cheese, broccoli, caramelized onions, feta, green olives, ' +
+        'hot or sweet peppers, kalamata olives, mixed bell peppers, mushrooms, pineapple, plum tomatoes, ricotta, roasted garlic, ' +
+        'roasted peppers, sundried tomatoes, red or sweet onions, portobello mushrooms, zucchini' +
+        '<div class="tops-h">Meat</div>Crispy bacon, ground beef, ham, pepperoni, sausage</div>';
+    } else if (sec.type === "inline") {
+      // One price for every name; "+2.00" after the ones that cost more.
+      const up = sec.up ? RS.price(sec.up) : "";
+      const one = it => {
+        if (allOut(it)) return '<span>' + esc(it.n) + ' ' + OUT_TAG + '</span>';
+        return '<span>' + esc(it.n) + (it.up && up ? '<b class="plus">+' + RS.money(up) + '</b>' : '') + '</span>';
+      };
+      body = stripHtml(sec.sizes, sec.strip) + '<div class="flavors">' +
+        (sec.groups || [["", sec.items]]).map(g => (g[0] ? '<span class="sub-h">' + esc(g[0]) + '</span>' : '') + g[1].map(one).join("")).join("") +
+        '</div>';
+    } else {
+      body = (sec.sizes ? stripHtml(sec.sizes) : "") + '<div class="rows">' + sec.items.map(rowHtml).join("") + '</div>';
+    }
+    return '<section class="sec"><div class="sec-h">' + esc(sec.h) + '</div>' +
+      (sec.logo ? '<img class="bh-logo" src="' + IMG + sec.logo + '" alt="Proudly Featuring Boar’s Head" onerror="this.style.display=\'none\'">' : '') +
+      (sec.by ? '<div class="by">' + esc(sec.by) + '</div>' : '') +
+      (sec.meta ? '<div class="meta">' + esc(sec.meta) + '</div>' : '') + body + '</section>';
+  }
+
+  function drawMenu() {
+    const menu = document.getElementById("menu");
+    menu.style.gridTemplateColumns = B.cols;
+    menu.innerHTML = liveColumns().map(c => '<div class="col">' + c.map(secHtml).join("") + '</div>').join("");
+    fit();
+  }
+
+  /*
+   * FIT. Order matters:
+   *   1. Tighten row spacing (text stays full size).
+   *   2. Shrink all text together, one small step at a time.
+   *   3. Below FS_FLOOR keep going so nothing is ever cut off, but flag
+   *      the board "small" so it shows up in &debug=1. That is the cue
+   *      to move a category to the other TV, not to live with tiny text.
+   * Then every column gets its own row spacing so all columns end on
+   * the same line.
+   */
+  let fitState = { fs: 1, pad: PAD_BASE, small: false };
+  function fit() {
+    const cols = [...document.querySelectorAll(".menu .col")];
+    // offsetHeight / clientHeight are layout pixels on the 1920x1080 stage.
+    // (getBoundingClientRect is NOT: it shrinks or grows with the stage
+    // when the TV scales it, which made rows run off the bottom at 720p.)
+    const natural = c => [...c.children].reduce((h, s) => h + s.offsetHeight, 0) +
+      (c.children.length - 1) * parseFloat(getComputedStyle(c).rowGap || 0);
+    // A long category name tightens its own letter spacing before it is
+    // allowed to shrink the whole board.
+    const heads = [...document.querySelectorAll(".menu .sec-h")];
+    const fitHeads = () => heads.forEach(h => {
+      let ls = 0.13; h.style.letterSpacing = "";
+      while (h.scrollWidth > h.clientWidth + 1 && ls > 0.02) { ls = Math.round((ls - 0.01) * 100) / 100; h.style.letterSpacing = ls + "em"; }
+    });
+    const over = () => { fitHeads(); return cols.some(c => natural(c) > c.clientHeight - 2) ||
+      [...document.querySelectorAll(".menu .row, .menu .sec-h")].some(r => r.scrollWidth > r.clientWidth + 1); };
+    const set = (fs, pad) => { stage.style.setProperty("--fs", fs); stage.style.setProperty("--pad", pad); };
+    cols.forEach(c => c.style.removeProperty("--pad"));
+
+    let fs = 1, pad = PAD_BASE;
+    set(fs, pad);
+    while (over() && pad > PAD_MIN) { pad -= 1; set(fs, pad); }
+    while (over() && fs > 0.6) { fs = Math.round((fs - 0.01) * 100) / 100; set(fs, pad); }
+
+    // Share out the leftover space so the columns bottom-align.
+    cols.forEach(c => {
+      const rows = c.querySelectorAll(".row").length;
+      if (!rows) return;
+      const free = c.clientHeight - 2 - natural(c);
+      const extra = Math.floor((free / (rows * 2 * fs)) * 10) / 10;
+      if (extra > 0) c.style.setProperty("--pad", Math.min(PAD_MAX, pad + extra));
+      // Belt and braces: sharing out space must never push a row off the end.
+      if (natural(c) > c.clientHeight) c.style.removeProperty("--pad");
+    });
+
+    fitState = { fs: fs, pad: pad, small: fs < FS_FLOOR };
+    stage.dataset.fs = fs;
+    stage.dataset.fit = fitState.small ? "small" : "ok";
+    diag();
+  }
+
+  /* =====================================================================
+     HERO: promo scheduler + stage
+     ===================================================================== */
+  const photoShape = {}; // file -> width / height
+  let started = false;
+  const photoOk = {};   // file -> true / false once the browser has tried it
+  let pendingPhotos = 0, photosSettled = false;
+  /** Every photo has either loaded or failed: pick the right promo once, finished. */
+  function settlePhotos() {
+    if (photosSettled) return;
+    photosSettled = true;
+    if (started) showPromo(true);
+  }
+  function preload(file, dir) {
+    if (!file || file in photoOk) return;
+    photoOk[file] = null;
+    pendingPhotos++;
+    const done = ok => {
+      photoOk[file] = ok;
+      if (--pendingPhotos === 0) settlePhotos();
+      // A photo that arrives late joins at the next change of promo,
+      // unless only the wordmark card is up: then bring the food in now.
+      else if (photosSettled && started && current && current === slides[BRAND_CARD.id]) showPromo(false);
+    };
+    const im = new Image();
+    im.onload = () => { photoShape[file] = im.naturalWidth / im.naturalHeight; done(true); };
+    im.onerror = () => done(false);
+    im.src = (dir || IMG) + file;
+  }
+  PROMOS.forEach(p => { if (!p.tv || p.tv === tv) { preload(p.img); preload(p.photo); preload(p.brandImg); preload(p.poster, VIDEO_DIR); (p.photos || []).forEach(f => preload(f)); } });
+
+  function shopHour() {
+    return Number(new Date().toLocaleString("en-US", { timeZone: RS.TZ, hour: "numeric", hour12: false })) % 24;
+  }
+  function promoPrice(p) {
+    if (!p.priceId || isBrandSpot(p)) return "";
+    return p.size ? RS.size(p.priceId, p.size) : RS.price(p.priceId);
+  }
+  /** Promos that may show right now, highest priority first. */
+  function eligible() {
+    let list;
+    const day = weekday(), hour = shopHour(), today = RS.today();
+    list = PROMOS.filter(p => {
+      if (p.enabled === false) return false;
+      if (p.tv && p.tv !== tv) return false;
+      if (p.days && p.days.indexOf(day) < 0) return false;
+      if (p.hours && (hour < p.hours[0] || hour >= p.hours[1])) return false;
+      if (p.from && today < p.from) return false;
+      if (p.until && today > p.until) return false;
+      if (p.img && photoOk[p.img] !== true) return false;
+      if (p.photo && photoOk[p.photo] !== true) return false;
+      if (p.brandImg && photoOk[p.brandImg] !== true) return false;
+      if (p.video && !stillSrc(p)) return false;                // a clip must have a still
+      if (p.poster && photoOk[p.poster] !== true) return false;
+      if (p.priceId && !isBrandSpot(p) && (RS.isRemoved(p.priceId) || !promoPrice(p))) return false;
+      if (p.priceId && RS.isSoldOut(p.priceId)) return false;          // 86'd today: skip its scene
+      return true;
+    });
+    // Until the photos have settled (a moment after power-on) only the
+    // wordmark card shows, so the hero never flips through half a list.
+    if (!photosSettled) return [BRAND_CARD];
+    list.sort((a, b) => (b.priority || 0) - (a.priority || 0));
+    const pinned = PIN && list.filter(p => p.id === PIN);
+    if (pinned && pinned.length) return pinned;
+    // Shared spots: promos with the same slot (e.g. "salads") take turns in
+    // ONE place in the rotation, swapping every SLOT_MINUTES, so adding an
+    // item never pushes another one out. Clock-based, so both reloads and
+    // restarts agree on whose turn it is.
+    const slotTurn = Math.floor(Date.now() / (SLOT_MINUTES * 60000));
+    const groups = {};
+    list.forEach(p => { if (p.slot) (groups[p.slot] = groups[p.slot] || []).push(p); });
+    list = list.filter(p => !p.slot || p === groups[p.slot][slotTurn % groups[p.slot].length]);
+    // Specials (priority) go first; after that, photo promos and video
+    // spots take turns so the videos are spread through the rotation.
+    const top = list.filter(p => (p.priority || 0) > 0);
+    const photos = list.filter(p => !(p.priority > 0) && !p.video);
+    const clips = list.filter(p => !(p.priority > 0) && p.video);
+    const mixed = [];
+    while (photos.length || clips.length) {
+      if (photos.length) mixed.push(photos.shift());
+      if (clips.length) mixed.push(clips.shift());
+    }
+    list = top.concat(mixed);
+    return list.length ? list : [BRAND_CARD];
+  }
+  const secondsOf = p => Math.max(4, Number(p.seconds) || PROMO_SECONDS);
+
+  /** Which promo the clock says is on right now, and how long until the next. */
+  function clockPick(list) {
+    const total = list.reduce((s, p) => s + secondsOf(p), 0);
+    let pos = (Date.now() / 1000) % total;
+    for (let i = 0; i < list.length; i++) {
+      const s = secondsOf(list[i]);
+      if (pos < s) return { index: i, left: s - pos };
+      pos -= s;
+    }
+    return { index: 0, left: secondsOf(list[0]) };
+  }
+
+  const slides = {};    // promo id -> element
+  function slideFor(p) {
+    if (slides[p.id]) return slides[p.id];
+    const el = document.createElement("div");
+    el.className = "slide" + ((p.wordmark || p.brandImg === "ludwigs-logo.png") ? " logo-card" : "");
+    const a = p.art || {};
+    const spot = isBrandSpot(p);
+    let art;
+    if (p.video) {
+      // Still first; the <video> is added only while this promo is on screen.
+      el.classList.add("has-clip");
+      art = '<div class="clip" style="--focus:' + esc(p.focus || "50% 50%") + '"><img src="' + stillSrc(p) + '" alt=""></div>';
+    } else if (p.feature === "bh" && p.photo) {
+      // Ludwig's x Proudly Featuring Boar's Head brand tile (see .feat CSS).
+      el.classList.add("feature");
+      let embers = "";
+      for (let i = 0; i < 26; i++) {
+        const r = (n => ((Math.sin(i * 12.9898 + n * 78.233) * 43758.5453) % 1 + 1) % 1);   // fixed pseudo-random
+        embers += '<span style="left:' + (4 + r(1) * 92).toFixed(1) + '%;--s:' + (3 + r(2) * 6).toFixed(1) + 'px;--t:' +
+          (5 + r(3) * 5).toFixed(2) + 's;--d:' + (-r(4) * 9).toFixed(2) + 's;--x:' + (-40 + r(5) * 80).toFixed(0) + 'px"></span>';
+      }
+      const bh = IMG + (p.logo || "boars-head-pf-white.png");
+      art = '<div class="clip photo" style="--focus:' + esc(p.focus || "50% 50%") + '"><img src="' + IMG + p.photo + '" alt=""></div>' +
+        '<div class="embers">' + embers + '</div>' +
+        '<div class="feat"><div class="feat-glow"></div>' +
+        '<img class="feat-rocco" src="' + LOGO + '" alt="" onerror="this.remove()">' +
+        '<div class="feat-rule"><i></i><b></b><i></i></div>' +
+        '<div class="feat-bh"><img src="' + bh + '" alt=""><div class="shine" style="-webkit-mask-image:url(' + bh + ');mask-image:url(' + bh + ')"></div></div>' +
+        '</div>';
+    } else if (p.photo) {
+      // A full-bleed photo (not a cutout), framed like the video spots, with a
+      // slow push-in. For dishes whose cutout sells them short.
+      art = '<div class="clip photo" style="--focus:' + esc(p.focus || "50% 50%") + '"><img src="' + IMG + p.photo + '" alt="">' +
+        (p.logo ? '<img class="clip-logo" src="' + IMG + p.logo + '" alt="" onerror="this.remove()">' : '') +
+        (p.credit ? '<span class="clip-credit">' + esc(p.credit) + '</span>' : '') + '</div>';
+    } else if (p.img) {
+      const src = IMG + p.img;
+      art = '<div class="plate" style="width:' + (a.w || 460) + 'px;margin-left:' + (a.x || 0) + 'px;margin-top:' + (a.y || 0) + 'px;transform-origin:center">' +
+        '<div class="zoom"><div style="position:relative;transform:rotate(' + (a.rot || 0) + 'deg)"><img src="' + src + '" alt="">' +
+        '<div class="sweep" style="-webkit-mask-image:url(' + src + ');mask-image:url(' + src + ')"></div></div></div></div>';
+    } else if (p.brandImg) {
+      art = '<div class="brandart"' + (a.w ? ' style="width:' + a.w + 'px"' : '') + '><img src="' + IMG + p.brandImg + '" alt=""></div>';
+    } else if (p.wordmark) {
+      art = '<div class="wordmark"><img src="' + LOGO + '" alt="Ludwig’s Village Market & Catering"></div>';
+    } else {
+      art = '<div class="medal"><span class="price"></span>' + (p.badge ? '<small>' + esc(p.badge) + '</small>' : '') + '</div>';
+    }
+    const medalOnly = !p.video && !p.photo && !p.img && !p.brandImg && !p.wordmark;
+    const title = spot ? (p.brandTitle || "") : (p.title || "");
+    const desc = spot ? "" : (p.desc || "");
+    const priced = !!p.priceId && !spot && !medalOnly;
+    el.innerHTML = '<div class="art">' + art + '</div><div class="copy">' +
+      '<div class="eyebrow">' + (p.badge && !medalOnly && !spot ? '<span class="badge">' + esc(p.badge) + '</span>' : '') +
+        (p.fav && !spot ? '<span><b class="favstar">&#9733;</b> Ludwig’s Favorite</span>' : '<span>' + esc(p.eyebrow || "") + '</span>') + '</div>' +
+      (title ? '<div class="title">' + esc(title) + '</div>' : '') +
+      (desc ? '<div class="desc">' + esc(desc) + '</div>' : '') +
+      (priced ? '<div class="pricebar"><i></i><span class="price"></span>' + (p.label ? '<small>' + esc(p.label) + '</small>' : '') + '</div>' : '') +
+      '</div>';
+    document.getElementById("slides").appendChild(el);
+    slides[p.id] = el;
+    return el;
+  }
+  /**
+   * Live price into a slide, then make it fit: long titles step down
+   * until they take two lines, and the photo shrinks if the Today card
+   * is tall, so the food never runs into the words.
+   */
+  function dressSlide(p, el) {
+    el.style.setProperty("--dur", secondsOf(p) + "s");
+    el.querySelectorAll(".price").forEach(n => { n.innerHTML = RS.money(promoPrice(p)); });
+    const t = el.querySelector(".title");
+    if (t) {
+      let size = 66; t.style.fontSize = size + "px";
+      const lines = () => Math.round(t.offsetHeight / (size * 0.95));   // layout px, not scaled px
+      while ((t.scrollWidth > t.clientWidth + 1 || lines() > 2) && size > 44) { size -= 2; t.style.fontSize = size + "px"; }
+    }
+    const plate = el.querySelector(".plate");
+    if (plate && photoShape[p.img]) {
+      const a = p.art || {};
+      const room = el.querySelector(".art").clientHeight - 52 - Math.abs(a.y || 0);
+      const tilt = Math.abs(a.rot || 0) * Math.PI / 180;
+      // Height the photo takes at width 1 (a tilted photo stands taller).
+      const tall = Math.cos(tilt) / photoShape[p.img] + Math.sin(tilt);
+      const full = Math.min(a.w || 430, 440), w = Math.round(Math.min(full, room / tall));
+      plate.style.width = w + "px";
+      plate.style.marginLeft = Math.round((a.x || 0) * w / full) + "px";
+    }
+  }
+
+  /*
+   * VIDEO. One clip at a time, only while its promo is on screen.
+   * The still stays visible until the clip is truly playing ("playing"
+   * plus a first frame), and comes back if the clip errors, never
+   * starts within 8 seconds, or stalls for 3 seconds. A clip that failed
+   * is left alone for 3 minutes, then tried again. A start the browser
+   * refuses is retried, and never benches the clip.
+   */
+  const videoBad = {};          // file -> time it last failed
+  let liveVideo = null;
+  function stopVideo() {
+    if (!liveVideo) return;
+    const v = liveVideo; liveVideo = null;
+    clearTimeout(v._watch);
+    v.classList.remove("live");
+    setTimeout(() => { try { v.pause(); v.removeAttribute("src"); v.load(); } catch (e) {} v.remove(); }, 800);
+  }
+  function startVideo(p, el) {
+    stopVideo();
+    if (!p.video || STILL || VIDEO_OFF) return;
+    if (videoBad[p.video] && Date.now() - videoBad[p.video] < 3 * 60 * 1000) return;
+    const box = el.querySelector(".clip");
+    if (!box) return;
+    const v = document.createElement("video");
+    v.muted = true; v.defaultMuted = true; v.loop = p.loop !== false; v.playsInline = true; v.autoplay = true;
+    v.setAttribute("muted", ""); v.setAttribute("playsinline", ""); v.setAttribute("preload", "auto");
+    v.disablePictureInPicture = true;
+    const fail = why => {
+      if (liveVideo !== v) return;
+      // A refused start ("blocked") is not the file's fault: try again next
+      // time round. Only a real error or stall benches the clip, briefly.
+      if (why !== "blocked") videoBad[p.video] = Date.now();
+      videoNote = p.video + " " + why;
+      stopVideo(); diag();
+    };
+    const watch = (ms, why) => { clearTimeout(v._watch); v._watch = setTimeout(() => fail(why), ms); };
+    v.addEventListener("playing", () => { clearTimeout(v._watch); });
+    // Show the clip only after a frame has really been drawn.
+    v.addEventListener("timeupdate", () => { if (v.currentTime > 0.05 && liveVideo === v) { v.classList.add("live"); videoNote = p.video + " playing"; } });
+    v.addEventListener("waiting", () => watch(3000, "stalled"));
+    v.addEventListener("stalled", () => { if (!v.classList.contains("live")) watch(8000, "no data"); });
+    v.addEventListener("error", () => fail("error"));
+    // Played once (loop: false): fade back to the still. Not a failure.
+    v.addEventListener("ended", () => { if (liveVideo === v) { videoNote = p.video + " ended"; stopVideo(); diag(); } });
+    liveVideo = v;
+    watch(8000, "did not start");
+    v.src = VIDEO_DIR + p.video;
+    box.appendChild(v);
+    // If the start is refused, try once more a moment later before giving up.
+    const tryPlay = again => {
+      const pr = v.play();
+      if (pr && pr.catch) pr.catch(() => { if (liveVideo !== v) return; if (again) setTimeout(() => tryPlay(false), 700); else fail("blocked"); });
+    };
+    tryPlay(true);
+  }
+  let videoNote = "";
+
+  let current = null, heroTimer = null, heroList = [], bootAt = 0;
+  // A full-screen reel hands off to its matching window clip: that promo
+  // is held on screen for its own length, then the clock rotation resumes.
+  let heroForce = null;                       // { id, until }
+  function forceHero(id) {
+    const f = PROMOS.find(x => x.id === id);
+    if (!f || eligible().indexOf(f) < 0) return;
+    heroForce = { id: id, until: Date.now() + secondsOf(f) * 1000 };
+    if (current) { current.classList.remove("on", "snap", "settled", "out"); current = null; }   // hidden under the reel
+    showPromo(false);
+  }
+  function showPromo(first) {
+    clearTimeout(heroTimer);
+    heroList = eligible();
+    let pick = clockPick(heroList);
+    let p = heroList[pick.index];
+    if (heroForce && Date.now() < heroForce.until) {
+      const i = heroList.findIndex(x => x.id === heroForce.id);
+      if (i >= 0) { p = heroList[i]; pick = { index: i, left: (heroForce.until - Date.now()) / 1000 }; }
+    } else heroForce = null;
+    const el = slideFor(p);
+
+    if (current !== el) {
+      // Right after power-on the new promo snaps in, so the old one (the
+      // wordmark card) leaves at once instead of fading over it.
+      const snapIn = first === true || Date.now() - bootAt < 4000;
+      if (current) {
+        const old = current;
+        old.classList.remove("on", "snap", "settled");
+        if (!snapIn) { old.classList.add("out"); setTimeout(() => old.classList.remove("out"), 1200); }
+      }
+      el.classList.remove("out", "snap", "settled");
+      // A promo with photos: [...] shows the next one each time round the rotation.
+      if (p.photos) {
+        const ok = p.photos.filter(f => photoOk[f] === true);
+        const img = el.querySelector(".clip.photo > img");
+        if (ok.length && img) {
+          const total = heroList.reduce((n, x) => n + secondsOf(x), 0) || 1;
+          img.src = IMG + ok[Math.floor(Date.now() / 1000 / total) % ok.length];
+        }
+      }
+      dressSlide(p, el);
+      void el.offsetWidth;                       // restart the sequence
+      // First frame after power-on (and the first food photo to land
+      // after it) appears finished, with no entrance.
+      if (snapIn) el.classList.add("snap");
+      el.classList.add("on");
+      current = el;
+      setTimeout(() => { if (current === el) el.classList.add("settled"); }, 1600);
+      startVideo(p, el);
+    } else {
+      dressSlide(p, el);
+    }
+    document.getElementById("ticks").innerHTML = heroList.length > 1
+      ? heroList.map((x, i) => '<i class="' + (i === pick.index ? 'on' : '') + '"></i>').join("") : "";
+    diag();
+    heroTimer = setTimeout(showPromo, Math.max(500, pick.left * 1000 + 30));
+  }
+  /** Fresh prices arrived: update what is on screen without restarting it. */
+  function refreshHero() {
+    PROMOS.concat(BRAND_CARD).forEach(p => { if (slides[p.id]) dressSlide(p, slides[p.id]); });
+    // If the promo on screen just became invalid (item removed), move on now.
+    const now = heroList.length ? heroList[clockPick(heroList).index] : null;
+    if (!current || !now || eligible().indexOf(now) < 0) showPromo(false);
+  }
+
+  /* ---------- Today card (always on screen) ---------- */
+  function todayCard() {
+    // TV 1: how to bake the pizzas. TV 2: how to bake the strombolis.
+    // Both lines are Ludwig's own instructions from their menus.
+    const card = tv === 1
+      ? '<div class="k">Bake at Home</div><div class="t"><span>425° for 8 to 12 min</span></div>' +
+        '<div class="s">Ask about our Pizza of the Week specials</div>'
+      : '<div class="k">Strombolis, Bake from Frozen</div><div class="t"><span>475° for 35 to 40 min</span></div>' +
+        '<div class="s">All natural, no preservatives</div>';
+    const banner = RS.settings.banner ? '<div class="s banner">' + esc(RS.settings.banner) + '</div>' : "";
+    return card + banner + '<div class="phone">Call Ahead<b>' + PHONE + '</b></div>';
+  }
+  function drawToday() { document.getElementById("today").innerHTML = todayCard(); }
+
+  /* ---------- diagnostics (&debug=1 only) ---------- */
+  let feedAt = 0;
+  function diag() {
+    if (!DEBUG) return;
+    let d = document.getElementById("diag");
+    if (!d) { d = document.createElement("div"); d.id = "diag"; stage.appendChild(d); }
+    const bad = Object.keys(photoOk).filter(f => photoOk[f] === false);
+    d.textContent = "ludwigs v1 tv" + tv + " | text " + Math.round(fitState.fs * 100) + "%" + (fitState.small ? " TOO SMALL" : "") +
+      " pad " + fitState.pad + " | promos " + heroList.map(p => p.id).join(",") +
+      " | feed " + (feedAt ? Math.round((Date.now() - feedAt) / 60000) + " min ago" : "saved copy") +
+      (bad.length ? " | MISSING " + bad.join(",") : "") + (videoNote ? " | video " + videoNote : "") + (VIDEO_OFF ? " | video off" : "") + (STILL ? " | still" : "");
+  }
+
+  /* =====================================================================
+     START
+     ===================================================================== */
+  document.getElementById("logo").src = LOGO;
+  let lastPrices = null, renders = 0;
+  RS.start(function () {
+    const prev = lastPrices;
+    lastPrices = Object.assign({}, RS.prices);
+    if (++renders > 1) feedAt = Date.now();     // first draw is the saved copy
+    drawMenu();
+    drawToday();
+    if (started) refreshHero();
+    if (prev) Object.keys(RS.prices).filter(id => RS.prices[id] !== prev[id]).forEach(id =>
+      document.querySelectorAll('.row[data-ids*="' + id + '"]').forEach(el => el.classList.add("pchanged")));
+  });
+  // Start at once: the wordmark card needs nothing from the network, and
+  // the first food promo snaps in the moment its photo has loaded.
+  /*
+   * VIDEO LIST. Clips added through the GitHub inbox are listed in
+   * video/videos.json (see .github/scripts/process_tv_videos.py). Read it
+   * at start and every 10 minutes; keep the last good copy on the TV so
+   * a network drop never empties the rotation.
+   */
+  const VIDEO_LIST_KEY = "ludwigs_tv_videos_v1";
+  function useVideoList(list) {
+    for (let i = PROMOS.length - 1; i >= 0; i--) if (PROMOS[i].fromList) PROMOS.splice(i, 1);
+    (Array.isArray(list) ? list : []).forEach(v => {
+      if (!v || !v.id || !v.video || !v.poster || (v.tv !== 1 && v.tv !== 2)) return;
+      PROMOS.push({ id: v.id, tv: v.tv, type: "brand", footage: "stock", fromList: true,
+        eyebrow: v.eyebrow || "", brandTitle: v.title || "Ludwig\u2019s",
+        video: v.video, poster: v.poster, loop: false, seconds: Number(v.seconds) || 9, focus: "50% 50%" });
+      if (v.tv === tv) preload(v.poster, VIDEO_DIR);
+    });
+  }
+  function loadVideoList() {
+    const bucket = Math.floor(Date.now() / 600000);
+    return fetch(VIDEO_DIR + "videos.json?v=" + bucket, { cache: "no-store" })
+      .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(list => { try { localStorage.setItem(VIDEO_LIST_KEY, JSON.stringify(list)); } catch (e) {} useVideoList(list); })
+      .catch(() => { try { useVideoList(JSON.parse(localStorage.getItem(VIDEO_LIST_KEY) || "[]")); } catch (e) {} });
+  }
+  try { useVideoList(JSON.parse(localStorage.getItem(VIDEO_LIST_KEY) || "[]")); } catch (e) {}
+  loadVideoList();
+  setInterval(loadVideoList, 10 * 60 * 1000);
+
+
+  /*
+   * SHOWTIME. Full-screen reels, in boards/v2c/video. Stock footage, so
+   * every reel is an unpriced brand spot: no item names, no prices.
+   *   file      the reel (9 s, 1920x1080, made from 4K sources)
+   *   layout    "full" (words over the bottom) or "split" (clip left,
+   *             words right, for a single tall clip)
+   *   hero      the window promo (PROMOS id) with the same footage. As the
+   *             reel fades out, that clip is already playing in the window,
+   *             so the reel hands off to it; then the rotation carries on.
+   * Clock-synced: every SHOW_EVERY seconds one reel plays, the next reel
+   * in the list each time. TV 2 runs half a cycle after TV 1.
+   *   &show=0 turns it off, &show=ID loops one reel (preview),
+   *   &showevery=N shortens the cycle (preview).
+   */
+  const SHOWS = [
+    // Full-screen reels go here once Ludwig's has footage (stock = unpriced brand spots).
+  ];
+  const SHOW_SECONDS = 9;
+  const SHOW_EVERY = Math.max(20, Number(params.get("showevery")) || 150);
+  const SHOW_PARAM = params.get("show") || "";
+  const SHOW_OFF = SHOW_PARAM === "0" || STILL || VIDEO_OFF;
+  const showEl = document.getElementById("show");
+  let showTimer = null, showVideo = null, showEnd = null, lastShowSlot = -1;
+  function showList() {
+    const mine = SHOWS.filter(s => s.tv === tv);
+    const pin = SHOW_PARAM && SHOWS.filter(s => s.id === SHOW_PARAM);
+    return pin && pin.length ? pin : mine;
+  }
+  function endShow(handoff) {
+    clearTimeout(showEnd);
+    if (handoff && handoff.hero && showEl.classList.contains("on")) forceHero(handoff.hero);
+    showEl.classList.remove("on");
+    const v = showVideo; showVideo = null;
+    if (v) setTimeout(() => { try { v.pause(); v.removeAttribute("src"); v.load(); } catch (e) {} }, 800);
+    setTimeout(() => { if (!showVideo) showEl.innerHTML = ""; }, 800);
+  }
+  function playShow(s) {
+    endShow();
+    showEl.className = "show" + (s.layout === "split" ? " split" : "");
+    showEl.innerHTML = '<video muted playsinline preload="auto"></video><div class="shade"></div>' +
+      '<img class="logo" alt="" src="' + LOGO + '" onerror="this.remove()">' +
+      '<div class="words"><div><div class="eyebrow"><span>' + esc(s.eyebrow) + '</span></div>' +
+      '<div class="big">' + esc(s.title) + '</div><div class="line"></div></div>' +
+      '<div class="call">Call Ahead<b>' + PHONE + '</b></div></div>';
+    const v = showEl.querySelector("video");
+    v.muted = true; v.defaultMuted = true; v.playsInline = true; v.disablePictureInPicture = true;
+    showVideo = v;
+    let shown = false;
+    const give = setTimeout(() => { if (!shown && showVideo === v) endShow(); }, 4000);   // never started
+    v.addEventListener("timeupdate", () => {
+      if (shown || showVideo !== v || v.currentTime < 0.05) return;
+      shown = true; clearTimeout(give);
+      stopVideo();                              // one video at a time on the stick
+      showEl.classList.add("on");
+      showEnd = setTimeout(() => endShow(s), Math.max(1000, (SHOW_SECONDS - 0.7) * 1000));
+    });
+    v.addEventListener("ended", () => { if (showVideo === v) endShow(s); });
+    v.addEventListener("error", () => { if (showVideo === v) endShow(); });
+    v.src = VIDEO_DIR + s.id + ".mp4";
+    const pr = v.play(); if (pr && pr.catch) pr.catch(() => { if (showVideo === v) endShow(); });
+  }
+  function scheduleShow() {
+    clearTimeout(showTimer);
+    const list = showList();
+    if (SHOW_OFF || !list.length) return;
+    if (SHOW_PARAM && SHOW_PARAM !== "0") {           // preview: loop one reel
+      playShow(list[0]); showTimer = setTimeout(scheduleShow, (SHOW_SECONDS + 3) * 1000); return;
+    }
+    const t = Date.now() / 1000 + (tv === 2 ? SHOW_EVERY / 2 : 0);
+    const slot = Math.floor(t / SHOW_EVERY), into = t - slot * SHOW_EVERY;
+    // Never in the first minute after power-on: the menu shows first.
+    // A late timer (busy or throttled browser) still plays the slot's reel,
+    // as long as most of it is left; each slot plays at most once.
+    if (slot !== lastShowSlot && into < SHOW_SECONDS - 3 && Date.now() - bootAt > 60000) {
+      lastShowSlot = slot;
+      playShow(list[slot % list.length]);
+    }
+    showTimer = setTimeout(scheduleShow, Math.max(500, (SHOW_EVERY - into) * 1000 + 50));
+  }
+
+
+  /*
+   * SELF-UPDATE. Fully Kiosk keeps this page open for days, so it never sees
+   * a new version on its own. Every 2 minutes, fetch this page fresh (no
+   * cache) and compare it with the copy we started from; if it changed,
+   * reload with a cache-busting stamp. Same URL and ?tv=, nothing to touch
+   * on the stick. Skipped mid-reel so a reload never cuts a video off.
+   * (Verified on Nov 20, 2026.)
+   */
+  (function selfUpdate() {
+    const here = location.pathname;
+    let base = null;
+    const grab = () => fetch(here + "?nc=" + Date.now(), { cache: "no-store" }).then(r => r.ok ? r.text() : null).catch(() => null);
+    grab().then(t => { base = t; });
+    setInterval(() => {
+      grab().then(t => {
+        if (!t || !base) { if (t && !base) base = t; return; }
+        if (t === base) return;
+        const showing = document.getElementById("show");
+        if (showing && showing.classList.contains("on")) return;      // after the reel
+        const q = new URLSearchParams(location.search);
+        q.set("rv", String(Date.now()));
+        location.replace(here + "?" + q.toString());
+      });
+    }, 2 * 60 * 1000);
+  })();
+
+  bootAt = Date.now(); started = true;
+  if (pendingPhotos === 0) photosSettled = true;
+  showPromo(true);
+  scheduleShow();
+  setTimeout(settlePhotos, 1500);      // slow connection: go with what has loaded
+  // Fonts are only fetched when first used, so ask for them up front and
+  // measure everything again when they (and the page) are in.
+  const wanted = ['600 30px "Barlow SC"', '700 30px "Barlow SC"', '500 30px "Barlow SC"', '600 30px "Oswald"', '500 16px "Oswald"', 'italic 900 66px "Playfair Display"'];
+  const remeasure = () => { fit(); PROMOS.concat(BRAND_CARD).forEach(p => { if (slides[p.id]) dressSlide(p, slides[p.id]); }); };
+  if (document.fonts && document.fonts.load) Promise.all(wanted.map(f => document.fonts.load(f).catch(() => null))).then(remeasure);
+  window.addEventListener("load", remeasure);
+  setTimeout(remeasure, 5000);
+  // Midnight: today's special and the daily promos change.
+  setInterval(drawToday, 10 * 60 * 1000);
+})();
+</script>
+</body>
+</html>
