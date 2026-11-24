@@ -21,7 +21,7 @@
   "use strict";
 
   // Apps Script web app URL + "?feed=1". Empty = no feed yet, FALLBACK only.
-  const FEED_URL = "";
+  const FEED_URL = "https://script.google.com/macros/s/AKfycbxti1E8FtIh0mmDJVuVwIBCS2jgfZCdJSIJ6Po85z2Ci_YpRxkKGE2DLT1AA-i61VNTvw/exec?feed=1";
   const STORE_KEY = "ludwigs_signage_feed_v1";
   const TZ = "America/New_York";
 
