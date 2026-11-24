@@ -460,13 +460,23 @@
     // =====================================================================
     // LIVE (set on the tablet, Today tab). Not counted in the 5 + 5.
     // Each one only shows while it is set: soups the day they were saved,
-    // the special until it ends, the cookie for its month. live: names
-    // which setting fills the scene (see liveSoups / liveSpecial / liveCookie).
+    // specials until they end, catering until it is turned off, the cookie
+    // for its month. live: names which setting fills the scene (see
+    // liveSoups / liveSpecials / liveCatering / liveCookie). No tv = both
+    // TVs; specials pick their own TV on the tablet, nth = which one.
     // =====================================================================
     { id: "t-cookie", tv: 1, type: "daily", live: "cookie", priority: 1, seconds: 10, eyebrow: "Cookie of the Month",
       brandImg: "ludwigs-logo.png", art: { w: 330 } },
     { id: "t-soups", tv: 2, type: "daily", live: "soups", priority: 2, seconds: 14, eyebrow: "Hot Soups Today" },
-    { id: "t-special", tv: 2, type: "daily", live: "special", priority: 1, seconds: 12, eyebrow: "Sandwich Special" },
+    { id: "t-special-1", type: "daily", live: "special", nth: 0, priority: 1, seconds: 12 },
+    { id: "t-special-2", type: "daily", live: "special", nth: 1, priority: 1, seconds: 12 },
+    { id: "t-special-3", type: "daily", live: "special", nth: 2, priority: 1, seconds: 12 },
+    { id: "t-special-4", type: "daily", live: "special", nth: 3, priority: 1, seconds: 12 },
+    // Catering spotlight over Ludwig's own catering photos (one per TV, from that TV's own set).
+    { id: "t-catering-1", tv: 1, type: "daily", live: "catering", priority: 1, seconds: 12, eyebrow: "Ludwig's Catering",
+      photo: "fruit-platter.jpg", focus: "50% 40%" },
+    { id: "t-catering-2", tv: 2, type: "daily", live: "catering", priority: 1, seconds: 12, eyebrow: "Ludwig's Catering",
+      photo: "event-grazing.jpg", focus: "50% 45%" },
     // =====================================================================
     // TV 1 (pizza): 5 pictures + 5 videos, none shared with TV 2.
     // =====================================================================
@@ -921,9 +931,15 @@
     const s = RS.settings;
     return s.soupsDate === RS.today() && Array.isArray(s.soups) ? s.soups.filter(x => x && x.name).slice(0, 8) : [];
   }
-  function liveSpecial() {
-    const s = RS.settings, sp = s.special;
-    return sp && sp.name && sp.price && (!s.specialEnds || s.specialEnds >= RS.today()) ? sp : null;
+  /** Specials for this TV that haven't ended, in tablet order. */
+  function liveSpecials() {
+    const list = Array.isArray(RS.settings.specials) ? RS.settings.specials : [];
+    return list.filter(sp => sp && sp.name && sp.price && String(sp.tv) === String(tv) && (!sp.ends || sp.ends >= RS.today()));
+  }
+  function liveSpecial(p) { return liveSpecials()[p.nth] || null; }
+  function liveCatering() {
+    const c = RS.settings.catering;
+    return c && c.headline && Array.isArray(c.tvs) && c.tvs.map(String).indexOf(String(tv)) >= 0 ? c : null;
   }
   function liveCookie() {
     const s = RS.settings;
@@ -931,12 +947,13 @@
   }
   function liveOn(p) {
     if (p.live === "soups") return liveSoups().length > 0;
-    if (p.live === "special") return !!liveSpecial();
+    if (p.live === "special") return !!liveSpecial(p);
+    if (p.live === "catering") return !!liveCatering();
     if (p.live === "cookie") return !!liveCookie();
     return true;
   }
   function promoPrice(p) {
-    if (p.live === "special") { const sp = liveSpecial(); return sp ? sp.price : ""; }
+    if (p.live === "special") { const sp = liveSpecial(p); return sp ? sp.price : ""; }
     if (!p.priceId || isBrandSpot(p)) return "";
     return p.size ? RS.size(p.priceId, p.size) : RS.price(p.priceId);
   }
@@ -1056,7 +1073,7 @@
     const medalOnly = !p.video && !p.photo && !p.img && !p.brandImg && !p.wordmark;
     // Live scenes get their words in dressLive (they change from the tablet).
     const title = p.live ? (p.live === "soups" ? "" : " ") : spot ? (p.brandTitle || "") : (p.title || "");
-    const desc = p.live === "special" ? " " : spot ? "" : (p.desc || "");
+    const desc = p.live === "special" || p.live === "catering" ? " " : spot ? "" : (p.desc || "");
     const priced = !!p.priceId && !spot && !medalOnly;
     el.innerHTML = '<div class="art">' + art + '</div><div class="copy">' +
       '<div class="eyebrow">' + (p.badge && !medalOnly && !spot ? '<span class="badge">' + esc(p.badge) + '</span>' : '') +
@@ -1111,10 +1128,16 @@
       return;
     }
     const t = el.querySelector(".title"), d = el.querySelector(".desc");
+    const eb = el.querySelector(".eyebrow span");
     if (p.live === "special") {
-      const sp = liveSpecial() || { name: "", desc: "" };
+      const sp = liveSpecial(p) || { kind: "", name: "", desc: "" };
+      if (eb) eb.textContent = sp.kind || "Today's Special";
       if (t) t.textContent = sp.name;
       if (d) { d.textContent = sp.desc || ""; d.style.display = sp.desc ? "" : "none"; }
+    } else if (p.live === "catering") {
+      const c = liveCatering() || { headline: "", message: "" };
+      if (t) t.textContent = c.headline;
+      if (d) { d.textContent = c.message || ""; d.style.display = c.message ? "" : "none"; }
     } else if (p.live === "cookie") {
       if (t) t.textContent = liveCookie();
     }
