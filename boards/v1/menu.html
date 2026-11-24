@@ -209,7 +209,11 @@
   .brandart { width: 430px; }
   .brandart img { display: block; width: 100%; height: auto; filter: drop-shadow(0 12px 26px rgba(0, 0, 0, .6)); }
   /* Live scenes set on the tablet: soups list, special price medal (gold = price). */
-  .soupcard { width: 426px; align-self: center; }
+  .soupcard { position: relative; z-index: 1; width: 426px; align-self: center; }
+  /* Dimmed photo of one of today's soups behind the list (fades out top and bottom). */
+  .soupbg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .32;
+    -webkit-mask-image: linear-gradient(transparent, #000 22%, #000 70%, transparent);
+            mask-image: linear-gradient(transparent, #000 22%, #000 70%, transparent); }
   .soupcard ul { list-style: none; margin: 0; padding: 0; --sz: 44px; }
   .soupcard li { display: flex; align-items: baseline; justify-content: space-between; gap: 14px;
     padding: calc(var(--sz) * .3) 0; border-top: 1px solid var(--hair); }
@@ -548,7 +552,7 @@
     { id: "v-indiv-dinners", tv: 2, type: "signature", footage: "real", seconds: 9, eyebrow: "Individual Dinners", title: "Made This Week",
       video: "real-indiv-dinners.mp4", poster: "real-indiv-dinners.jpg", loop: false },                // IG reel DcEsQ7Nuk-9
     { id: "v-deli-sandwich", tv: 2, type: "brand", footage: "stock", seconds: 9, eyebrow: "Ludwig’s Deli", brandTitle: "Stacked & Sliced",
-      video: "deli-sandwich.mp4", poster: "deli-sandwich.jpg", loop: false },                          // Pexels 41189329 [7]
+      video: "deli-sandwich.mp4", poster: "deli-sandwich.jpg", loop: false , enabled: false /* Brian Nov 24: guy hacksawing a toasted sandwich. Replace with a better deli clip. */ },                          // Pexels 41189329 [7]
 
     // ----- Off (Brian's ratings Nov 23, bar is 8). Files kept in v1/video.
     { id: "v-pizza-build", enabled: false, tv: 1, type: "brand", footage: "stock", video: "pizza-build.mp4", poster: "pizza-build.jpg" },       // 6
@@ -981,7 +985,10 @@
     return s.cookie && s.cookieMonth === RS.today().slice(0, 7) ? String(s.cookie) : "";
   }
   function liveOn(p) {
-    if (p.live === "soups") return liveSoups().length > 0;
+    // The list earns its spot with 2+ soups, or when a soup has no photo
+    // (then it is the only place that soup shows). One soup with a photo
+    // is covered by the Soup of the Day scene.
+    if (p.live === "soups") { const l = liveSoups(); return l.length > 1 || l.some(x => !soupPhoto(x.name)); }
     if (p.live === "special") return !!liveSpecial(p);
     if (p.live === "catering") return !!liveCatering();
     if (p.live === "soupspot") return liveSoupSpots().length > 0;
@@ -1096,7 +1103,7 @@
         '<div class="zoom"><div style="position:relative;transform:rotate(' + (a.rot || 0) + 'deg)"><img src="' + src + '" alt="">' +
         '<div class="sweep" style="-webkit-mask-image:url(' + src + ');mask-image:url(' + src + ')"></div></div></div></div>';
     } else if (p.live === "soups") {
-      art = '<div class="soupcard"><ul></ul></div>';
+      art = '<img class="soupbg" alt="" style="display:none"><div class="soupcard"><ul></ul></div>';
     } else if (p.live === "special") {
       art = '<div class="medal gold"><span class="price"></span><small>Special</small></div>';
     } else if (p.brandImg) {
@@ -1157,6 +1164,11 @@
       const ul = el.querySelector(".soupcard ul");
       ul.innerHTML = list.map((s, i) => '<li style="animation-delay:' + (0.5 + i * 0.12).toFixed(2) + 's"><span class="nm">' + esc(s.name) + '</span>' +
         (Array.isArray(s.tags) && s.tags.length ? '<span class="tg">' + s.tags.map(esc).join(" · ") + '</span>' : '') + '</li>').join("");
+      const bg = el.querySelector(".soupbg"), withPhoto = list.find(x => soupPhoto(x.name));
+      if (bg) {
+        if (withPhoto) { const f = IMG + soupPhoto(withPhoto.name); if (!bg.src.endsWith(f)) bg.src = f; bg.style.display = ""; }
+        else bg.style.display = "none";
+      }
       const room = el.querySelector(".art").clientHeight - 24;
       let sz = list.length <= 4 ? 46 : list.length <= 6 ? 40 : 34;
       ul.style.setProperty("--sz", sz + "px");
