@@ -468,6 +468,11 @@
     { id: "t-cookie", tv: 1, type: "daily", live: "cookie", priority: 1, seconds: 10, eyebrow: "Cookie of the Month",
       brandImg: "ludwigs-logo.png", art: { w: 330 } },
     { id: "t-soups", tv: 2, type: "daily", live: "soups", priority: 2, seconds: 14, eyebrow: "Hot Soups Today" },
+    // One of today's soups, big photo, a different one each time round
+    // (only soups that have a photo in SOUP_PHOTOS). photo = any soup file,
+    // just so the frame is built; dressLive swaps in the right one.
+    { id: "t-soup-spot", tv: 2, type: "daily", live: "soupspot", priority: 2, seconds: 10, eyebrow: "Soup of the Day",
+      photo: "soup-chicken-noodle.jpg", focus: "50% 55%" },
     { id: "t-special-1", type: "daily", live: "special", nth: 0, priority: 1, seconds: 12 },
     { id: "t-special-2", type: "daily", live: "special", nth: 1, priority: 1, seconds: 12 },
     { id: "t-special-3", type: "daily", live: "special", nth: 2, priority: 1, seconds: 12 },
@@ -948,6 +953,29 @@
     const c = RS.settings.catering;
     return c && c.headline && Array.isArray(c.tvs) && c.tvs.map(String).indexOf(String(tv)) >= 0 ? c : null;
   }
+  /*
+   * Soup photos, by soup name as typed on the tablet. Keys are the name in
+   * lowercase letters only ("Ham & Split Pea" -> "hamsplitpea"), with a
+   * trailing "soup" dropped. New soups show in the list but get no photo
+   * scene until one is added here. All 11 are one matched set (same bowl,
+   * bread, light): Chicken Noodle and Italian Wedding from Rocco's, the
+   * rest made in ChatGPT in that style (Nov 24).
+   */
+  const SOUP_PHOTOS = {
+    chickennoodle: "soup-chicken-noodle.jpg", italianwedding: "soup-italian-wedding.jpg",
+    kennettsquaremushroom: "soup-mushroom.jpg", mushroom: "soup-mushroom.jpg", creamofmushroom: "soup-mushroom.jpg",
+    beefchili: "soup-beef-chili.jpg", chili: "soup-beef-chili.jpg",
+    lasagna: "soup-lasagna.jpg", seafoodbisque: "soup-seafood-bisque.jpg",
+    vegetable: "soup-vegetable.jpg", hamsplitpea: "soup-split-pea.jpg", splitpea: "soup-split-pea.jpg", hamandsplitpea: "soup-split-pea.jpg",
+    beefymac: "soup-beefy-mac.jpg", loadedbakedpotato: "soup-loaded-potato.jpg", snapper: "soup-snapper.jpg"
+  };
+  if (tv === 2) [...new Set(Object.values(SOUP_PHOTOS))].forEach(f => preload(f));
+  function soupPhoto(name) {
+    const key = String(name || "").toLowerCase().replace(/[^a-z]/g, "").replace(/soup$/, "");
+    const f = SOUP_PHOTOS[key];
+    return f && photoOk[f] !== false ? f : "";
+  }
+  function liveSoupSpots() { return liveSoups().filter(s => soupPhoto(s.name)); }
   function liveCookie() {
     const s = RS.settings;
     return s.cookie && s.cookieMonth === RS.today().slice(0, 7) ? String(s.cookie) : "";
@@ -956,6 +984,7 @@
     if (p.live === "soups") return liveSoups().length > 0;
     if (p.live === "special") return !!liveSpecial(p);
     if (p.live === "catering") return !!liveCatering();
+    if (p.live === "soupspot") return liveSoupSpots().length > 0;
     if (p.live === "cookie") return !!liveCookie();
     return true;
   }
@@ -1080,7 +1109,7 @@
     const medalOnly = !p.video && !p.photo && !p.img && !p.brandImg && !p.wordmark;
     // Live scenes get their words in dressLive (they change from the tablet).
     const title = p.live ? (p.live === "soups" ? "" : " ") : spot ? (p.brandTitle || "") : (p.title || "");
-    const desc = p.live === "special" || p.live === "catering" ? " " : spot ? "" : (p.desc || "");
+    const desc = p.live === "special" || p.live === "catering" || p.live === "soupspot" ? " " : spot ? "" : (p.desc || "");
     const priced = !!p.priceId && !spot && !medalOnly;
     el.innerHTML = '<div class="art">' + art + '</div><div class="copy">' +
       '<div class="eyebrow">' + (p.badge && !medalOnly && !spot ? '<span class="badge">' + esc(p.badge) + '</span>' : '') +
@@ -1141,6 +1170,14 @@
       if (eb) eb.textContent = sp.kind || "Today's Special";
       if (t) t.textContent = sp.name;
       if (d) { d.textContent = sp.desc || ""; d.style.display = sp.desc ? "" : "none"; }
+    } else if (p.live === "soupspot") {
+      const list = liveSoupSpots();
+      const s = list.length ? list[(p.turn || 0) % list.length] : null;
+      const img = el.querySelector(".clip.photo > img");
+      if (s && img && !img.src.endsWith(soupPhoto(s.name))) img.src = IMG + soupPhoto(s.name);
+      if (t) t.textContent = s ? s.name : "";
+      const tags = s && Array.isArray(s.tags) ? s.tags : [];
+      if (d) { d.textContent = tags.join(" \u00b7 "); d.style.display = tags.length ? "" : "none"; }
     } else if (p.live === "catering") {
       const c = liveCatering() || { headline: "", message: "" };
       if (t) t.textContent = c.headline;
@@ -1248,6 +1285,7 @@
           img.src = IMG + ok[Math.floor(Date.now() / 1000 / total) % ok.length];
         }
       }
+      if (p.live === "soupspot") p.turn = (p.turn || 0) + 1;   // next soup each time round
       dressSlide(p, el);
       void el.offsetWidth;                       // restart the sequence
       // First frame after power-on (and the first food photo to land
