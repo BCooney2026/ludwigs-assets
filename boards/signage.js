@@ -121,6 +121,31 @@
     st.style.marginTop = offs[drift][1] + "px";
   }
 
+  /*
+   * Special photos (made on the tablet, stored in the command center's Drive).
+   * RS.photo(fileId, done) returns the image (a data: URL) once it is here,
+   * or "" while it is still coming; done() runs when it arrives. Each photo
+   * is fetched once per page load (?img=<fileId> on the command center).
+   */
+  const photos = {};
+  RS.photo = function (id, done) {
+    if (!id || !FEED_URL) return "";
+    const have = photos[id];
+    if (typeof have === "string") return have;
+    if (have) { if (done) have.push(done); return ""; }          // already coming
+    photos[id] = done ? [done] : [];
+    fetch(FEED_URL.replace(/\?.*$/, "") + "?img=" + encodeURIComponent(id), { cache: "no-store" })
+      .then(r => r.json())
+      .then(j => {
+        const waiting = photos[id];
+        if (!j || !/^data:image\//.test(j.data || "")) { delete photos[id]; return; }   // try again next time
+        photos[id] = j.data;
+        waiting.forEach(f => { try { f(j.data); } catch (e) {} });
+      })
+      .catch(() => { delete photos[id]; });
+    return "";
+  };
+
   /* ---------- feed ---------- */
   function apply(feed) {
     if (!feed || !Array.isArray(feed.items)) return false;

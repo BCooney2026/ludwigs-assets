@@ -413,7 +413,7 @@
   <div class="menu" id="menu"></div>
   <div class="show" id="show"></div>
 </div>
-<script src="../signage.js?v=6"></script>
+<script src="../signage.js?v=7"></script>
 <script>
 (function () {
   "use strict";
@@ -955,7 +955,9 @@
   /** Specials for this TV that haven't ended, in tablet order. */
   function liveSpecials() {
     const list = Array.isArray(RS.settings.specials) ? RS.settings.specials : [];
-    return list.filter(sp => sp && sp.name && sp.price && String(sp.tv) === String(tv) && (!sp.ends || sp.ends >= RS.today()));
+    const live = list.filter(sp => sp && sp.name && sp.price && String(sp.tv) === String(tv) && (!sp.ends || sp.ends >= RS.today()));
+    live.forEach(sp => { if (sp.photo) RS.photo(sp.photo); });   // start fetching photos before their turn
+    return live;
   }
   function liveSpecial(p) { return liveSpecials()[p.nth] || null; }
   function liveCatering() {
@@ -1110,7 +1112,9 @@
     } else if (p.live === "soups") {
       art = '<img class="soupbg" alt="" style="display:none"><div class="soupcard"><ul></ul></div>';
     } else if (p.live === "special") {
-      art = '<div class="medal gold"><span class="price"></span><small>Special</small></div>';
+      // Photo (from the tablet) when the special has one, else the gold price circle.
+      art = '<div class="clip photo spphoto" style="--focus:50% 55%;display:none"><img alt=""></div>' +
+        '<div class="medal gold"><span class="price"></span><small>Special</small></div>';
     } else if (p.brandImg) {
       art = '<div class="brandart"' + (a.w ? ' style="width:' + a.w + 'px"' : '') + '><img src="' + IMG + p.brandImg + '" alt=""></div>';
     } else if (p.wordmark) {
@@ -1122,7 +1126,7 @@
     // Live scenes get their words in dressLive (they change from the tablet).
     const title = p.live ? (p.live === "soups" ? "" : " ") : spot ? (p.brandTitle || "") : (p.title || "");
     const desc = p.live === "special" || p.live === "catering" || p.live === "soupspot" ? " " : spot ? "" : (p.desc || "");
-    const priced = !!p.priceId && !spot && !medalOnly;
+    const priced = (!!p.priceId && !spot && !medalOnly) || p.live === "special";
     el.innerHTML = '<div class="art">' + art + '</div><div class="copy">' +
       '<div class="eyebrow">' + (p.badge && !medalOnly && !spot ? '<span class="badge">' + esc(p.badge) + '</span>' : '') +
         (p.fav && !spot ? '<span><b class="favstar">&#9733;</b> Ludwig’s Favorite</span>' : '<span>' + esc(p.eyebrow || "") + '</span>') + '</div>' +
@@ -1184,6 +1188,15 @@
     const eb = el.querySelector(".eyebrow span");
     if (p.live === "special") {
       const sp = liveSpecial(p) || { kind: "", name: "", desc: "" };
+      // Photo: full window with the price in the bar below. No photo (or not
+      // here yet): the gold circle. A photo that arrives later is swapped in.
+      const pic = sp.photo ? RS.photo(sp.photo, () => dressLive(p, el)) : "";
+      const clip = el.querySelector(".spphoto"), medal = el.querySelector(".medal"), bar = el.querySelector(".pricebar");
+      if (pic && clip.querySelector("img").getAttribute("src") !== pic) clip.querySelector("img").src = pic;
+      clip.style.display = pic ? "" : "none";
+      medal.style.display = pic ? "none" : "";
+      if (bar) bar.style.display = pic ? "" : "none";
+      el.classList.toggle("has-clip", !!pic);
       if (eb) eb.textContent = sp.kind || "Today's Special";
       if (t) t.textContent = sp.name;
       if (d) { d.textContent = sp.desc || ""; d.style.display = sp.desc ? "" : "none"; }
