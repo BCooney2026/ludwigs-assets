@@ -991,7 +991,17 @@
     const f = SOUP_PHOTOS[key];
     return f && photoOk[f] !== false ? f : "";
   }
-  function liveSoupSpots() { return liveSoups().filter(s => soupPhoto(s.name)); }
+  /*
+   * A soup's picture: its repo photo first (SOUP_PHOTOS), else the photo
+   * the counter made on the tablet (library photo, comes with the feed as
+   * s.photo). "" while a library photo is still on its way.
+   */
+  function soupSrc(s) {
+    const f = soupPhoto(s.name);
+    if (f) return IMG + f;
+    return s.photo ? RS.photo(s.photo) : "";
+  }
+  function liveSoupSpots() { return liveSoups().filter(s => soupSrc(s)); }
   /*
    * Cookie of the Month photos, matched by words in the name the tablet
    * saved ("S'mores", "Smores Cookie" and "S'MORES!" all match). The four
@@ -1006,6 +1016,12 @@
     [/sprinkle/, "sprinkle-cookies.jpg"]
   ];
   if (tv === 1) COOKIE_PHOTOS.forEach(c => preload(c[1]));
+  /** The cookie's picture: repo photo first, else its library photo from the tablet. */
+  function cookieSrc() {
+    const name = liveCookie(), f = cookiePhoto(name);
+    if (f) return IMG + f;
+    return name && RS.settings.cookiePhoto ? RS.photo(RS.settings.cookiePhoto) : "";
+  }
   function cookiePhoto(name) {
     const key = String(name || "").toLowerCase().replace(/[^a-z]/g, "");
     const hit = key && COOKIE_PHOTOS.find(c => c[0].test(key));
@@ -1019,12 +1035,12 @@
     // The list earns its spot with 2+ soups, or when a soup has no photo
     // (then it is the only place that soup shows). One soup with a photo
     // is covered by the Soup of the Day scene.
-    if (p.live === "soups") { const l = liveSoups(); return l.length > 1 || l.some(x => !soupPhoto(x.name)); }
+    if (p.live === "soups") { const l = liveSoups(); return l.length > 1 || l.some(x => !soupSrc(x)); }
     if (p.live === "special") return !!liveSpecial(p);
     if (p.live === "catering") return !!liveCatering();
     if (p.live === "soupspot") return liveSoupSpots().length > 0;
-    if (p.live === "cookie") return !!liveCookie() && !cookiePhoto(liveCookie());
-    if (p.live === "cookiespot") return !!cookiePhoto(liveCookie());
+    if (p.live === "cookie") return !!liveCookie() && !cookieSrc();
+    if (p.live === "cookiespot") return !!cookieSrc();
     return true;
   }
   function promoPrice(p) {
@@ -1198,9 +1214,9 @@
       const ul = el.querySelector(".soupcard ul");
       ul.innerHTML = list.map((s, i) => '<li style="animation-delay:' + (0.5 + i * 0.12).toFixed(2) + 's"><span class="nm">' + esc(s.name) + '</span>' +
         (Array.isArray(s.tags) && s.tags.length ? '<span class="tg">' + s.tags.map(esc).join(" · ") + '</span>' : '') + '</li>').join("");
-      const bg = el.querySelector(".soupbg"), withPhoto = list.find(x => soupPhoto(x.name));
+      const bg = el.querySelector(".soupbg"), withPhoto = list.find(x => soupSrc(x));
       if (bg) {
-        if (withPhoto) { const f = IMG + soupPhoto(withPhoto.name); if (!bg.src.endsWith(f)) bg.src = f; bg.style.display = ""; }
+        if (withPhoto) { const f = soupSrc(withPhoto); if (bg.getAttribute("src") !== f) bg.src = f; bg.style.display = ""; }
         else bg.style.display = "none";
       }
       const room = el.querySelector(".art").clientHeight - 24;
@@ -1228,8 +1244,8 @@
     } else if (p.live === "soupspot") {
       const list = liveSoupSpots();
       const s = list.length ? list[(p.turn || 0) % list.length] : null;
-      const img = el.querySelector(".clip.photo > img");
-      if (s && img && !img.src.endsWith(soupPhoto(s.name))) img.src = IMG + soupPhoto(s.name);
+      const img = el.querySelector(".clip.photo > img"), src = s ? soupSrc(s) : "";
+      if (src && img && img.getAttribute("src") !== src) img.src = src;
       if (t) t.textContent = s ? s.name : "";
       const tags = s && Array.isArray(s.tags) ? s.tags : [];
       if (d) { d.textContent = tags.join(" \u00b7 "); d.style.display = tags.length ? "" : "none"; }
@@ -1240,9 +1256,9 @@
     } else if (p.live === "cookie") {
       if (t) t.textContent = liveCookie();
     } else if (p.live === "cookiespot") {
-      const f = cookiePhoto(liveCookie());
+      const src = cookieSrc();
       const img = el.querySelector(".clip.photo > img");
-      if (f && img && !img.src.endsWith(f)) img.src = IMG + f;
+      if (src && img && img.getAttribute("src") !== src) img.src = src;
       if (t) t.textContent = liveCookie();
     }
   }
