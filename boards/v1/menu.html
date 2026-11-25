@@ -81,6 +81,13 @@
     border-left: 7px solid var(--green); box-shadow: 0 8px 22px rgba(0, 0, 0, .32); white-space: nowrap; }
   .bake .k { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 16px; letter-spacing: .26em; text-transform: uppercase; color: var(--green); }
   .bake .t { font-weight: 700; font-size: 27px; line-height: 1; color: var(--ivory); }
+  .menu.nostrip { padding-top: 22px; padding-bottom: 22px; grid-template-rows: minmax(0, 1fr); }
+  /* Bake line inside a section (TV 2 Strombolis). */
+  .sizes-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .bake-in { display: flex; align-items: baseline; gap: 12px; margin-top: calc(8px * var(--fs)); padding: calc(3px * var(--fs)) 14px;
+    border-left: 4px solid var(--green); background: rgba(255, 245, 233, .05); border-radius: 0 3px 3px 0; white-space: nowrap; }
+  .bake-in .k { font-family: "Oswald", sans-serif; font-weight: 600; font-size: calc(15px * var(--fs)); letter-spacing: .22em; text-transform: uppercase; color: var(--green); }
+  .bake-in .t { font-weight: 700; font-size: calc(24px * var(--fs)); color: var(--ivory); }
   .bake .s { margin-left: auto; font-size: 19px; font-weight: 500; color: var(--ivory-3); }
   .col { min-height: 0; display: flex; flex-direction: column; gap: calc(20px * var(--fs)); }
 
@@ -703,7 +710,7 @@
             { no: 17, n: "Abruzzi Chicken", ids: ["L056"], d: "Italian chicken tenders, Abruzzi cheese, strawberry habanero jam" },
             { n: "<b>Extras</b> Roasted peppers, hot peppers, sweet peppers, pickles, cole slaw", ids: ["L058"], np: 1, note: 1, html: 1 }
           ]},
-          { h: "Strombolis", type: "inline", sizes: "L060", strip: "Any", up: "L061", meta: "Pre-made & frozen", groups: [
+          { h: "Strombolis", type: "inline", sizes: "L060", strip: "Any", up: "L061", meta: "Pre-made & frozen. All natural, no preservatives", bake: ["Bake", "475° for 35 to 40 min"], groups: [
             ["Meat", [
               { n: "Pepperoni", ids: ["L062"] }, { n: "Cheesesteak", ids: ["L063"] },
               { n: "Chicken & Broccoli", ids: ["L064"], up: 1 }, { n: "Sausage, Onion & Pepper", ids: ["L065"] },
@@ -874,7 +881,9 @@
         if (allOut(it)) return '<span>' + esc(it.n) + ' ' + OUT_TAG + '</span>';
         return '<span>' + esc(it.n) + (it.up && up ? '<b class="plus">+' + RS.money(up) + '</b>' : '') + '</span>';
       };
-      body = stripHtml(sec.sizes, sec.strip) + '<div class="flavors">' +
+      // Bake line rides on the same row as the price, so it costs no height.
+      const bake = sec.bake ? '<span class="bake-in"><span class="k">' + esc(sec.bake[0]) + '</span><span class="t">' + esc(sec.bake[1]) + '</span></span>' : "";
+      body = (bake ? '<div class="sizes-row">' + stripHtml(sec.sizes, sec.strip) + bake + '</div>' : stripHtml(sec.sizes, sec.strip)) + '<div class="flavors">' +
         (sec.groups || [["", sec.items]]).map(g => (g[0] ? '<span class="sub-h">' + esc(g[0]) + '</span>' : '') + g[1].map(one).join("")).join("") +
         '</div>';
     } else {
@@ -883,13 +892,16 @@
     return '<section class="sec"><div class="sec-h">' + esc(sec.h) + '</div>' +
       (sec.logo ? '<img class="bh-logo" src="' + IMG + sec.logo + '" alt="Proudly Featuring Boar’s Head" onerror="this.style.display=\'none\'">' : '') +
       (sec.by ? '<div class="by">' + esc(sec.by) + '</div>' : '') +
-      (sec.meta ? '<div class="meta">' + esc(sec.meta) + '</div>' : '') + body + '</section>';
+      (sec.meta ? '<div class="meta">' + esc(sec.meta) + '</div>' : '') +
+      body + '</section>';
   }
 
   function drawMenu() {
     const menu = document.getElementById("menu");
     menu.style.gridTemplateColumns = B.cols;
-    menu.innerHTML = bakeStrip() + liveColumns().map(c => '<div class="col">' + c.map(secHtml).join("") + '</div>').join("");
+    const strip = bakeStrip();
+    menu.classList.toggle("nostrip", !strip);
+    menu.innerHTML = strip + liveColumns().map(c => '<div class="col">' + c.map(secHtml).join("") + '</div>').join("");
     fit();
   }
 
@@ -1518,14 +1530,13 @@
   }
 
   /* ---------- Today card (always on screen) ---------- */
-  /** Bake strip across the top of the menu. TV 1: pizzas. TV 2: strombolis.
-      Both lines are Ludwig's own instructions from their menus. */
+  /** Bake strip across the top of the menu, TV 1 only (pizzas). Ludwig's
+      own instructions from their menu. */
   function bakeStrip() {
     return tv === 1
       ? '<div class="bake"><span class="k">Bake at Home</span><span class="t">425° for 8 to 12 min</span>' +
         '<span class="s">Ask about our Pizza of the Week specials</span></div>'
-      : '<div class="bake"><span class="k">Strombolis, Bake from Frozen</span><span class="t">475° for 35 to 40 min</span>' +
-        '<span class="s">All natural, no preservatives</span></div>';
+      : "";   // TV 2: the stromboli bake line sits in the Strombolis section (Brian, Nov 24)
   }
   function todayCard() {
     const card = "";
