@@ -223,6 +223,18 @@
   .soupcard .tg { flex: none; font-family: "Oswald", sans-serif; font-weight: 500; font-size: 16px; letter-spacing: .16em;
     text-transform: uppercase; color: var(--gold); white-space: nowrap; }
   .slide.on .soupcard li { animation: drop .7s var(--ease) both; }
+  /* No photo for any of today's soups: bigger centered names between two
+     gold rules, over a warm glow, so one or two soups fill the window. */
+  .soupcard.solo { text-align: center; padding: 46px 0; }
+  .soupcard.solo::before { content: ""; position: absolute; inset: -60px -40px; z-index: -1;
+    background: radial-gradient(closest-side, rgba(216, 171, 105, .22), rgba(216, 171, 105, .07) 60%, transparent); }
+  .soupcard.solo ul::before, .soupcard.solo ul::after { content: ""; display: block; width: 140px; height: 2px; margin: 0 auto;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+  .soupcard.solo ul::before { margin-bottom: 34px; }
+  .soupcard.solo ul::after { margin-top: 34px; }
+  .soupcard.solo li { flex-direction: column; align-items: center; gap: 10px; }
+  .soupcard.solo .nm { overflow-wrap: break-word; }
+  .slide.on .soupcard.solo ul::before, .slide.on .soupcard.solo ul::after { animation: fadein 1.2s ease .4s both; }
   .medal.gold { background: radial-gradient(circle at 34% 28%, #f8e2ad, var(--gold) 52%, #8c6a2c); color: #1d160e; }
   .medal.gold .price sup { color: #1d160e; }
 
@@ -1311,8 +1323,11 @@
         if (withPhoto) { const f = soupSrc(withPhoto); if (bg.getAttribute("src") !== f) bg.src = f; bg.style.display = ""; }
         else bg.style.display = "none";
       }
+      // No soup photo at all: the bigger centered "solo" look (CSS above).
+      const solo = !withPhoto && list.length <= 3;
+      el.querySelector(".soupcard").classList.toggle("solo", solo);
       const room = el.querySelector(".art").clientHeight - 24;
-      let sz = list.length <= 4 ? 46 : list.length <= 6 ? 40 : 34;
+      let sz = solo ? [76, 66, 56][list.length - 1] || 56 : list.length <= 4 ? 46 : list.length <= 6 ? 40 : 34;
       ul.style.setProperty("--sz", sz + "px");
       while (ul.offsetHeight > room && sz > 24) { sz -= 2; ul.style.setProperty("--sz", sz + "px"); }
       return;
