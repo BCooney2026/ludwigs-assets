@@ -72,11 +72,11 @@
   /* =====================================================================
      MENU (right). Stable: nothing here moves except a changed price.
      ===================================================================== */
-  .menu { position: absolute; left: 490px; right: 0; top: 0; bottom: 0; padding: 8px 30px 12px 38px;
-    display: grid; column-gap: 32px; grid-template-rows: auto minmax(0, 1fr); }
-  /* Bake strip: how to bake at home, one line across the top of every
+  .menu { position: absolute; left: 490px; right: 0; top: 0; bottom: 0; padding: 14px 30px 8px 38px;
+    display: grid; column-gap: 32px; grid-template-rows: minmax(0, 1fr) auto; }
+  /* Bake strip: how to bake at home, one line across the bottom of every
      column (moved out of the Today card, Brian Nov 24). */
-  .bake { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 26px; margin: 0 -12px 8px; padding: 4px 22px 4px 24px;
+  .bake { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 26px; margin: 8px -12px 0; padding: 4px 22px 4px 24px;
     background: linear-gradient(90deg, #2a2420, var(--surface) 60%, rgba(37, 32, 28, .6)); border-radius: 4px;
     border-left: 7px solid var(--green); box-shadow: 0 8px 22px rgba(0, 0, 0, .32); white-space: nowrap; }
   .bake .k { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 16px; letter-spacing: .26em; text-transform: uppercase; color: var(--green); }
@@ -375,15 +375,28 @@
   .today .s { font-size: 20px; color: var(--ivory-3); margin-top: 3px; font-weight: 500; line-height: 1.2; }
   .today .s.banner { color: var(--ivory); margin-top: 8px; }
   /* Catering line from the tablet: gold label, ivory headline. */
-  .today .cater { margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--rule); }
-  .today .cater:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
-  .today .s.banner:first-child { margin-top: 0; }
-  .today .cater .ck { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 16px; letter-spacing: .26em; text-transform: uppercase; color: var(--gold); }
-  .today .cater .ch { font-weight: 700; font-size: 27px; line-height: 1.12; margin-top: 4px; color: var(--ivory); }
-  .today .cater .cm { font-size: 19px; color: var(--ivory-3); margin-top: 3px; font-weight: 500; line-height: 1.2; }
+  /* Catering panel (tablet headline + message): its own warm, gold-trimmed
+     panel across the top of the Today card, headline in the slide serif, and a
+     slow gold sheen so it catches the eye (Brian: the plain version got missed). */
+  .today .cater { position: relative; overflow: hidden; margin: -16px -22px 14px -27px; padding: 17px 22px 18px 22px; border-left: 5px solid var(--gold);
+    background: radial-gradient(130% 150% at 0% 0%, rgba(226, 182, 100, .34), transparent 58%),
+                linear-gradient(135deg, #5c2a1e 0%, #3a1b14 50%, #211612 100%);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, .45), inset 0 0 0 1px rgba(210, 170, 95, .18);
+    border-top: 2px solid var(--gold); border-bottom: 1px solid rgba(210, 170, 95, .45); border-radius: 0 4px 0 0; }
+  .today .cater:last-child { margin-bottom: -16px; border-radius: 0 4px 4px 0; }
+  .today .cater::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(105deg, transparent 38%, rgba(255, 226, 160, .26) 50%, transparent 62%) 120% 0 / 250% 100% no-repeat;
+    animation: shine 9s ease-in-out 2s infinite; }
+  .today .cater .ck { display: flex; align-items: center; gap: 12px; font-family: "Oswald", sans-serif; font-weight: 600; font-size: 16px;
+    letter-spacing: .3em; text-transform: uppercase; color: var(--gold); }
+  .today .cater .ck::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(210, 170, 95, .8), transparent); }
+  .today .cater .ch { font-family: "Playfair Display", Georgia, serif; font-weight: 900; font-style: italic; font-size: 36px; line-height: 1.04;
+    margin-top: 8px; color: #fff4df; text-shadow: 0 2px 14px rgba(0, 0, 0, .55), 0 0 22px rgba(210, 170, 95, .25); }
+  .today .cater .cm { font-size: 19px; color: #ecdcc4; margin-top: 8px; font-weight: 500; line-height: 1.2; }
   .today .phone { margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--rule); display: flex; justify-content: space-between; align-items: baseline;
     font-family: "Oswald", sans-serif; letter-spacing: .18em; text-transform: uppercase; font-size: 15px; color: var(--ivory-3); }
   .today .phone:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  .today .cater + .phone { margin-top: 0; padding-top: 0; border-top: 0; }
   /* Key for the stars in the menu: Ludwig's favorites (none picked yet). */
   .today .favkey { margin-top: 10px; font-family: "Oswald", sans-serif; font-weight: 500; font-size: 17px; letter-spacing: .22em;
     text-transform: uppercase; color: var(--gold); }
@@ -916,7 +929,8 @@
     menu.style.gridTemplateColumns = B.cols;
     const strip = bakeStrip();
     menu.classList.toggle("nostrip", !strip);
-    menu.innerHTML = strip + liveColumns().map(c => '<div class="col">' + c.map(secHtml).join("") + '</div>').join("");
+    // Columns first, then the bake strip, so the strip sits under them (grid row 2).
+    menu.innerHTML = liveColumns().map(c => '<div class="col">' + c.map(secHtml).join("") + '</div>').join("") + strip;
     fit();
   }
 
@@ -1552,7 +1566,7 @@
   }
 
   /* ---------- Today card (always on screen) ---------- */
-  /** Bake strip across the top of the menu, TV 1 only (pizzas). Ludwig's
+  /** Bake strip across the bottom of the menu, TV 1 only (pizzas). Ludwig's
       own instructions from their menu. */
   function bakeStrip() {
     return tv === 1
@@ -1566,7 +1580,7 @@
     // Catering headline + message from the tablet, pinned here the whole
     // time catering is on for this TV (the window scene still rotates too).
     const c = liveCatering();
-    const cater = c ? '<div class="cater"><div class="ck">Catering</div><div class="ch">' + esc(c.headline) + '</div>' +
+    const cater = c ? '<div class="cater"><div class="ck">Now Booking</div><div class="ch">' + esc(c.headline) + '</div>' +
       (c.message ? '<div class="cm">' + esc(c.message) + '</div>' : "") + '</div>' : "";
     return card + banner + cater + '<div class="phone">Call Ahead<b>' + PHONE + '</b></div>';
   }
