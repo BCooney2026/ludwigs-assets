@@ -471,6 +471,11 @@
     // =====================================================================
     { id: "t-cookie", tv: 1, type: "daily", live: "cookie", priority: 1, seconds: 10, eyebrow: "Cookie of the Month",
       brandImg: "ludwigs-logo.png", art: { w: 330 } },
+    // Cookie of the Month with its photo (COOKIE_PHOTOS). The logo card above
+    // only shows for a cookie that has no photo yet. photo = any cookie file,
+    // just so the frame is built; dressLive swaps in the right one.
+    { id: "t-cookie-spot", tv: 1, type: "daily", live: "cookiespot", priority: 1, seconds: 10, eyebrow: "Cookie of the Month",
+      photo: "cookie-smores.jpg", focus: "50% 50%" },
     { id: "t-soups", tv: 2, type: "daily", live: "soups", priority: 2, seconds: 14, eyebrow: "Hot Soups Today" },
     // One of today's soups, big photo, a different one each time round
     // (only soups that have a photo in SOUP_PHOTOS). photo = any soup file,
@@ -987,6 +992,25 @@
     return f && photoOk[f] !== false ? f : "";
   }
   function liveSoupSpots() { return liveSoups().filter(s => soupPhoto(s.name)); }
+  /*
+   * Cookie of the Month photos, matched by words in the name the tablet
+   * saved ("S'mores", "Smores Cookie" and "S'MORES!" all match). The four
+   * cookie-*.jpg were made in ChatGPT (Nov 24) from Ludwig's own sprinkle
+   * cookie photo as the style reference; sprinkle-cookies.jpg is real.
+   */
+  const COOKIE_PHOTOS = [
+    [/smore/, "cookie-smores.jpg"],
+    [/applepie/, "cookie-apple-pie-oatmeal.jpg"],
+    [/bacon/, "cookie-bacon-chocolate-chip.jpg"],
+    [/cran/, "cookie-oatmeal-cran-raisin.jpg"],
+    [/sprinkle/, "sprinkle-cookies.jpg"]
+  ];
+  if (tv === 1) COOKIE_PHOTOS.forEach(c => preload(c[1]));
+  function cookiePhoto(name) {
+    const key = String(name || "").toLowerCase().replace(/[^a-z]/g, "");
+    const hit = key && COOKIE_PHOTOS.find(c => c[0].test(key));
+    return hit && photoOk[hit[1]] !== false ? hit[1] : "";
+  }
   function liveCookie() {
     const s = RS.settings;
     return s.cookie && s.cookieMonth === RS.today().slice(0, 7) ? String(s.cookie) : "";
@@ -999,7 +1023,8 @@
     if (p.live === "special") return !!liveSpecial(p);
     if (p.live === "catering") return !!liveCatering();
     if (p.live === "soupspot") return liveSoupSpots().length > 0;
-    if (p.live === "cookie") return !!liveCookie();
+    if (p.live === "cookie") return !!liveCookie() && !cookiePhoto(liveCookie());
+    if (p.live === "cookiespot") return !!cookiePhoto(liveCookie());
     return true;
   }
   function promoPrice(p) {
@@ -1213,6 +1238,11 @@
       if (t) t.textContent = c.headline;
       if (d) { d.textContent = c.message || ""; d.style.display = c.message ? "" : "none"; }
     } else if (p.live === "cookie") {
+      if (t) t.textContent = liveCookie();
+    } else if (p.live === "cookiespot") {
+      const f = cookiePhoto(liveCookie());
+      const img = el.querySelector(".clip.photo > img");
+      if (f && img && !img.src.endsWith(f)) img.src = IMG + f;
       if (t) t.textContent = liveCookie();
     }
   }
