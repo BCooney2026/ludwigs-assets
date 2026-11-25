@@ -1034,9 +1034,13 @@
     return live;
   }
   function liveSpecial(p) { return liveSpecials()[p.nth] || null; }
+  /** This TV's catering words ({ headline, message }) or null. Each TV has its
+      own (byTv, Nov 25); older feeds have one headline for every TV. */
   function liveCatering() {
     const c = RS.settings.catering;
-    return c && c.headline && Array.isArray(c.tvs) && c.tvs.map(String).indexOf(String(tv)) >= 0 ? c : null;
+    if (!c || !Array.isArray(c.tvs) || c.tvs.map(String).indexOf(String(tv)) < 0) return null;
+    const t = c.byTv ? c.byTv[String(tv)] : c;
+    return t && t.headline ? t : null;
   }
   /*
    * Soup photos, by soup name as typed on the tablet. Keys are the name in
