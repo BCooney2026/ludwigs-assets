@@ -359,6 +359,11 @@
   .today .t .price { color: var(--price); font-size: 32px; }
   .today .s { font-size: 20px; color: var(--ivory-3); margin-top: 3px; font-weight: 500; line-height: 1.2; }
   .today .s.banner { color: var(--ivory); margin-top: 8px; }
+  /* Catering line from the tablet: gold label, ivory headline. */
+  .today .cater { margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--rule); }
+  .today .cater .ck { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 16px; letter-spacing: .26em; text-transform: uppercase; color: var(--gold); }
+  .today .cater .ch { font-weight: 700; font-size: 27px; line-height: 1.12; margin-top: 4px; color: var(--ivory); }
+  .today .cater .cm { font-size: 19px; color: var(--ivory-3); margin-top: 3px; font-weight: 500; line-height: 1.2; }
   .today .phone { margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--rule); display: flex; justify-content: space-between; align-items: baseline;
     font-family: "Oswald", sans-serif; letter-spacing: .18em; text-transform: uppercase; font-size: 15px; color: var(--ivory-3); }
   .today .phone:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
@@ -1197,9 +1202,17 @@
       if (photos.length) mixed.push(photos.shift());
       if (clips.length) mixed.push(clips.shift());
     }
+    // Catering comes round more often than the rest: after the specials,
+    // it shows again every CATERING_EVERY scenes, so a customer waiting at
+    // the counter sees it at least once (Brian, Nov 24).
+    const cater = top.filter(p => p.live === "catering");
+    if (cater.length && mixed.length > CATERING_EVERY) {
+      for (let i = CATERING_EVERY; i < mixed.length; i += CATERING_EVERY + 1) mixed.splice(i, 0, cater[0]);
+    }
     list = top.concat(mixed);
     return list.length ? list : [BRAND_CARD];
   }
+  const CATERING_EVERY = 3;   // catering scene repeats after every 3 other scenes
   const secondsOf = p => Math.max(4, Number(p.seconds) || PROMO_SECONDS);
 
   /** Which promo the clock says is on right now, and how long until the next. */
@@ -1504,7 +1517,12 @@
       : '<div class="k">Strombolis, Bake from Frozen</div><div class="t"><span>475° for 35 to 40 min</span></div>' +
         '<div class="s">All natural, no preservatives</div>';
     const banner = RS.settings.banner ? '<div class="s banner">' + esc(RS.settings.banner) + '</div>' : "";
-    return card + banner + '<div class="phone">Call Ahead<b>' + PHONE + '</b></div>';
+    // Catering headline + message from the tablet, pinned here the whole
+    // time catering is on for this TV (the window scene still rotates too).
+    const c = liveCatering();
+    const cater = c ? '<div class="cater"><div class="ck">Catering</div><div class="ch">' + esc(c.headline) + '</div>' +
+      (c.message ? '<div class="cm">' + esc(c.message) + '</div>' : "") + '</div>' : "";
+    return card + banner + cater + '<div class="phone">Call Ahead<b>' + PHONE + '</b></div>';
   }
   function drawToday() { document.getElementById("today").innerHTML = todayCard(); }
 
