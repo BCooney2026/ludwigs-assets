@@ -476,11 +476,12 @@
     // just so the frame is built; dressLive swaps in the right one.
     { id: "t-cookie-spot", tv: 1, type: "daily", live: "cookiespot", priority: 1, seconds: 10, eyebrow: "Cookie of the Month",
       photo: "cookie-smores.jpg", focus: "50% 50%" },
-    { id: "t-soups", tv: 2, type: "daily", live: "soups", priority: 2, seconds: 14, eyebrow: "Hot Soups Today" },
+    { id: "t-soups", tv: 2, type: "daily", live: "soups", priority: 2, seconds: 14, eyebrow: "Homemade Soups Today",
+      desc: "Made in house, preservative free" },   // Ludwig's own words on their soup posts
     // One of today's soups, big photo, a different one each time round
     // (only soups that have a photo in SOUP_PHOTOS). photo = any soup file,
     // just so the frame is built; dressLive swaps in the right one.
-    { id: "t-soup-spot", tv: 2, type: "daily", live: "soupspot", priority: 2, seconds: 10, eyebrow: "Soup of the Day",
+    { id: "t-soup-spot", tv: 2, type: "daily", live: "soupspot", priority: 2, seconds: 10, eyebrow: "Homemade Soup of the Day",
       photo: "soup-chicken-noodle.jpg", focus: "50% 55%" },
     { id: "t-special-1", type: "daily", live: "special", nth: 0, priority: 1, seconds: 12 },
     { id: "t-special-2", type: "daily", live: "special", nth: 1, priority: 1, seconds: 12 },
@@ -961,7 +962,7 @@
   function liveSpecials() {
     const list = Array.isArray(RS.settings.specials) ? RS.settings.specials : [];
     const live = list.filter(sp => sp && sp.name && sp.price && String(sp.tv) === String(tv) && (!sp.ends || sp.ends >= RS.today()));
-    live.forEach(sp => { if (sp.photo) RS.photo(sp.photo); });   // start fetching photos before their turn
+    live.forEach(sp => { if (sp.photo && sp.photo !== "none") RS.photo(sp.photo); });   // start fetching photos before their turn
     return live;
   }
   function liveSpecial(p) { return liveSpecials()[p.nth] || null; }
@@ -985,11 +986,102 @@
     vegetable: "soup-vegetable.jpg", hamsplitpea: "soup-split-pea.jpg", splitpea: "soup-split-pea.jpg", hamandsplitpea: "soup-split-pea.jpg",
     beefymac: "soup-beefy-mac.jpg", loadedbakedpotato: "soup-loaded-potato.jpg", snapper: "soup-snapper.jpg"
   };
+  /*
+   * PHOTO RULES (same list in the command center's Index.html; keep them in
+   * step). A name is lowercased to letters only, then the first rule whose
+   * pattern matches wins. Soups: SOUP_PHOTOS (exact names) first, then
+   * SOUP_RULES. Specials: SPECIAL_RULES on the name plus "what's on it".
+   * All of these photos are in boards/img (made in ChatGPT Nov 24 from
+   * Ludwig's own photos as the style), so they cost nothing per use; the
+   * paid photo button is only for things none of these match.
+   */
+  const SOUP_RULES = [
+    [/blackbean/, "soup-black-bean-chili.jpg"],
+    [/whitechicken|chickenchili|mangochicken|chipotlechicken/, "soup-white-chicken-chili.jpg"],
+    [/turkeychili/, "soup-turkey-chili.jpg"],
+    [/chili/, "soup-beef-chili.jpg"],
+    [/squash|pumpkin|parsnip|sweetpotato/, "soup-squash-bisque.jpg"],
+    [/frenchonion/, "soup-french-onion.jpg"],
+    [/clam/, "soup-clam-chowder.jpg"],
+    [/cornnoodle/, "soup-chicken-corn-noodle.jpg"],
+    [/corn/, "soup-corn-chowder.jpg"],
+    [/lobster|crab|shrimp|seafood/, "soup-seafood-bisque.jpg"],
+    [/snapper/, "soup-snapper.jpg"],
+    [/tomato/, "soup-creamy-tomato.jpg"],
+    [/stuffedpepper|stuffedcabbage|cabbageandbeef/, "soup-stuffed-pepper.jpg"],
+    [/cabbage/, "soup-ham-cabbage.jpg"],
+    [/stew/, "soup-beef-stew.jpg"],
+    [/orzo/, "soup-lemon-chicken-orzo.jpg"],
+    [/tortellini/, "soup-tortellini.jpg"],
+    [/minestrone|pasta|penne/, "soup-minestrone.jpg"],
+    [/ramen|miso/, "soup-miso-ramen.jpg"],
+    [/coconut|lemongrass|thai|curry/, "soup-coconut-curry.jpg"],
+    [/potpie/, "soup-chicken-pot-pie.jpg"],
+    [/broccoli|cauliflower/, "soup-broccoli-cheddar.jpg"],
+    [/loaded/, "soup-loaded-potato.jpg"],
+    [/potato/, "soup-creamy-potato.jpg"],
+    [/florentine/, "soup-creamy-florentine.jpg"],
+    [/whitebean|spinach|tuscan/, "soup-spinach-white-bean.jpg"],
+    [/barley/, "soup-beef-barley.jpg"],
+    [/splitpea|lentil/, "soup-split-pea.jpg"],
+    [/mushroom/, "soup-mushroom.jpg"],
+    [/wedding|meatball/, "soup-italian-wedding.jpg"],
+    [/rice/, "soup-chicken-rice.jpg"],
+    [/lasagna/, "soup-lasagna.jpg"],
+    [/mac/, "soup-beefy-mac.jpg"],
+    [/(chicken|turkey|beef|sausage|hearty)\w*(veg)/, "soup-chicken-vegetable.jpg"],
+    [/veg/, "soup-vegetable.jpg"],
+    [/noodle/, "soup-chicken-noodle.jpg"]
+  ];
+  const SPECIAL_RULES = [
+    [/elvis|peanutbutter/, "sp-elvis.jpg"],
+    [/tuna/, "sp-tuna-melt.jpg"],
+    [/pulledpork/, "sp-bbq-pulled-pork.jpg"],
+    [/manchego/, "sp-ham-manchego.jpg"],
+    [/meatball/, "sp-meatball-hoagie.jpg"],
+    [/fig|sweetspicy|sweetandspicy/, "sp-sweet-spicy-prosciutto.jpg"],
+    [/hothoney/, "sp-hot-honey-cutlet.jpg"],
+    [/spicyitalian|sassy/, "sp-spicy-italian.jpg"],
+    [/rosemary/, "sp-rosemary-chicken.jpg"],
+    [/cordon/, "sp-cordon-bleu.jpg"],
+    [/blt|chickenclub|grilledchicken\w*bacon/, "sp-chicken-blt.jpg"],
+    [/stuffing|hotturkey/, "sp-hot-turkey-hoagie.jpg"],
+    [/cutlet\w*gravy|gravy\w*cutlet/, "sp-cutlet-gravy-cranberry.jpg"],
+    [/turkey\w*bacon\w*wrap|turkeybaconcheddar/, "sp-turkey-bacon-wrap.jpg"],
+    [/potroast/, "sp-pot-roast-grinder.jpg"],
+    [/sausage\w*pepper|pepper\w*sausage/, "sp-sausage-peppers.jpg"],
+    [/pastrami/, "sp-tender-pastrami-hoagie.jpg"],
+    [/parm/, "sp-chicken-parm.jpg"],
+    [/tender\w*wrap|toasterwrap/, "wrap-special.jpg"],
+    [/cutlet\w*prosciutto|prosciutto\w*cutlet|balsamic/, "sp-cutlet-prosciutto.jpg"],
+    [/strawberry\w*mousse|strawberrychocolate/, "ds-strawberry-chocolate-mousse.jpg"],
+    [/caramel\w*cheesecake|cheesecakemousse/, "ds-caramel-cheesecake-mousse.jpg"],
+    [/smore\w*mousse|mousse\w*smore/, "ds-smores-mousse.jpg"],
+    [/spicedapple|applesandcream|applescream/, "ds-spiced-apples-cream.jpg"],
+    [/mint\w*mousse|mintchocolate/, "ds-mint-mousse.jpg"]
+  ];
+  function ruleFile(rules, text) {
+    const key = String(text || "").toLowerCase().replace(/[^a-z]/g, "");
+    const hit = key && rules.find(r => r[0].test(key));
+    return hit ? hit[1] : "";
+  }
   if (tv === 2) [...new Set(Object.values(SOUP_PHOTOS))].forEach(f => preload(f));
+  /** Repo photo for a soup: its exact name first, then SOUP_RULES. */
   function soupPhoto(name) {
     const key = String(name || "").toLowerCase().replace(/[^a-z]/g, "").replace(/soup$/, "");
-    const f = SOUP_PHOTOS[key];
+    const f = SOUP_PHOTOS[key] || ruleFile(SOUP_RULES, key);
     return f && photoOk[f] !== false ? f : "";
+  }
+  /**
+   * A special's picture: the photo made on the tablet, else a repo photo
+   * that matches its name or "what's on it". "none" = the counter picked
+   * No Photo (gold price circle). "" while a tablet photo is on its way.
+   */
+  function specialSrc(sp, done) {
+    if (sp.photo === "none") return "";
+    if (sp.photo) return RS.photo(sp.photo, done);
+    const f = ruleFile(SPECIAL_RULES, sp.name + " " + (sp.desc || ""));
+    return f && photoOk[f] !== false ? IMG + f : "";
   }
   /*
    * A soup's picture: its repo photo first (SOUP_PHOTOS), else the photo
@@ -1231,7 +1323,7 @@
       const sp = liveSpecial(p) || { kind: "", name: "", desc: "" };
       // Photo: full window with the price in the bar below. No photo (or not
       // here yet): the gold circle. A photo that arrives later is swapped in.
-      const pic = sp.photo ? RS.photo(sp.photo, () => dressLive(p, el)) : "";
+      const pic = specialSrc(sp, () => dressLive(p, el));
       const clip = el.querySelector(".spphoto"), medal = el.querySelector(".medal"), bar = el.querySelector(".pricebar");
       if (pic && clip.querySelector("img").getAttribute("src") !== pic) clip.querySelector("img").src = pic;
       clip.style.display = pic ? "" : "none";
