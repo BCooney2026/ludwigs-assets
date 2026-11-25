@@ -72,8 +72,16 @@
   /* =====================================================================
      MENU (right). Stable: nothing here moves except a changed price.
      ===================================================================== */
-  .menu { position: absolute; left: 490px; right: 0; top: 0; bottom: 0; padding: 22px 30px 22px 38px;
-    display: grid; column-gap: 32px; }
+  .menu { position: absolute; left: 490px; right: 0; top: 0; bottom: 0; padding: 8px 30px 12px 38px;
+    display: grid; column-gap: 32px; grid-template-rows: auto minmax(0, 1fr); }
+  /* Bake strip: how to bake at home, one line across the top of every
+     column (moved out of the Today card, Brian Nov 24). */
+  .bake { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 26px; margin: 0 -12px 8px; padding: 4px 22px 4px 24px;
+    background: linear-gradient(90deg, #2a2420, var(--surface) 60%, rgba(37, 32, 28, .6)); border-radius: 4px;
+    border-left: 7px solid var(--green); box-shadow: 0 8px 22px rgba(0, 0, 0, .32); white-space: nowrap; }
+  .bake .k { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 16px; letter-spacing: .26em; text-transform: uppercase; color: var(--green); }
+  .bake .t { font-weight: 700; font-size: 27px; line-height: 1; color: var(--ivory); }
+  .bake .s { margin-left: auto; font-size: 19px; font-weight: 500; color: var(--ivory-3); }
   .col { min-height: 0; display: flex; flex-direction: column; gap: calc(20px * var(--fs)); }
 
   .sec { display: flex; flex-direction: column; flex: none; }
@@ -361,6 +369,8 @@
   .today .s.banner { color: var(--ivory); margin-top: 8px; }
   /* Catering line from the tablet: gold label, ivory headline. */
   .today .cater { margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--rule); }
+  .today .cater:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  .today .s.banner:first-child { margin-top: 0; }
   .today .cater .ck { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 16px; letter-spacing: .26em; text-transform: uppercase; color: var(--gold); }
   .today .cater .ch { font-weight: 700; font-size: 27px; line-height: 1.12; margin-top: 4px; color: var(--ivory); }
   .today .cater .cm { font-size: 19px; color: var(--ivory-3); margin-top: 3px; font-weight: 500; line-height: 1.2; }
@@ -879,7 +889,7 @@
   function drawMenu() {
     const menu = document.getElementById("menu");
     menu.style.gridTemplateColumns = B.cols;
-    menu.innerHTML = liveColumns().map(c => '<div class="col">' + c.map(secHtml).join("") + '</div>').join("");
+    menu.innerHTML = bakeStrip() + liveColumns().map(c => '<div class="col">' + c.map(secHtml).join("") + '</div>').join("");
     fit();
   }
 
@@ -1508,14 +1518,17 @@
   }
 
   /* ---------- Today card (always on screen) ---------- */
+  /** Bake strip across the top of the menu. TV 1: pizzas. TV 2: strombolis.
+      Both lines are Ludwig's own instructions from their menus. */
+  function bakeStrip() {
+    return tv === 1
+      ? '<div class="bake"><span class="k">Bake at Home</span><span class="t">425° for 8 to 12 min</span>' +
+        '<span class="s">Ask about our Pizza of the Week specials</span></div>'
+      : '<div class="bake"><span class="k">Strombolis, Bake from Frozen</span><span class="t">475° for 35 to 40 min</span>' +
+        '<span class="s">All natural, no preservatives</span></div>';
+  }
   function todayCard() {
-    // TV 1: how to bake the pizzas. TV 2: how to bake the strombolis.
-    // Both lines are Ludwig's own instructions from their menus.
-    const card = tv === 1
-      ? '<div class="k">Bake at Home</div><div class="t"><span>425° for 8 to 12 min</span></div>' +
-        '<div class="s">Ask about our Pizza of the Week specials</div>'
-      : '<div class="k">Strombolis, Bake from Frozen</div><div class="t"><span>475° for 35 to 40 min</span></div>' +
-        '<div class="s">All natural, no preservatives</div>';
+    const card = "";
     const banner = RS.settings.banner ? '<div class="s banner">' + esc(RS.settings.banner) + '</div>' : "";
     // Catering headline + message from the tablet, pinned here the whole
     // time catering is on for this TV (the window scene still rotates too).
