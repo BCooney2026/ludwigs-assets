@@ -487,6 +487,9 @@
    *   size      for multi-size prices: which size to show ("Large")
    *   label     small word after the price ("Large 16″")
    *   days, hours, from, until, seconds, priority, slot, enabled
+   *   season    ["MM-DD", "MM-DD"] = only between these dates, every year
+   *             (may wrap past New Year's)
+   *   offSeason ["MM-DD", "MM-DD"] = never between these dates
    *   feature   "bh" = animated Proudly Featuring Boar's Head tile (needs photo)
    * A scene is skipped (never shown broken) when it is out of schedule,
    * its photo did not load, or its item has no price or was removed.
@@ -541,6 +544,13 @@
       desc: "Order one for your next event", photo: "grazing-board.jpg", focus: "45% 40%" },            // FB 1713566350769018 [7+]
     { id: "p-fruit-platter", tv: 1, type: "signature", eyebrow: "Catering", title: "Fruit & Cheese Platters",
       desc: "Call or stop in to order", photo: "fruit-platter.jpg", focus: "50% 40%" },                // IG De-H0E-uVK2
+    // Holiday catering (added Nov 24; extra scenes, not part of the 5 + 5).
+    // Items from Ludwig's CateringMenu_2026.pdf; their site lists Christmas
+    // and New Year's take-home meals.
+    { id: "p-xmas-catering", tv: 1, type: "signature", season: ["11-15", "12-25"], eyebrow: "Christmas Catering",
+      title: "Christmas, Catered", desc: "Platters, carving boards & hot trays", photo: "xmas-catering.jpg", focus: "50% 35%" },
+    { id: "p-newyear-catering", tv: 1, type: "signature", season: ["12-26", "01-01"], eyebrow: "New Year's",
+      title: "Ring It In", desc: "Party platters & hot trays to go", photo: "newyear-catering.jpg", focus: "50% 35%" },
     { id: "p-dessert", tv: 1, type: "signature", eyebrow: "Something Sweet", title: "Save Room for Dessert",
       photo: "dessert.jpg", focus: "45% 40%" },                                                         // FB 1568048591987462 [7]
     // Videos: Ludwig's own reels (real footage), plus one stock clip.
@@ -580,6 +590,11 @@
     { id: "p-bh-holiday-ham", tv: 2, type: "signature", priority: 1, badge: "Holiday", eyebrow: "Boar's Head Gift Box",
       title: "The Holiday Ham", desc: "Sweet Slice ham + Brown Sugar & Spice glaze. Fully cooked, heat & serve.",
       photo: "bh-holiday-ham.jpg", focus: "50% 50%" },
+    // Corporate catering, all year; Christmas look Nov 15 to Dec 31 (office parties book early).
+    { id: "p-corporate-catering", tv: 2, type: "signature", offSeason: ["11-15", "12-31"], eyebrow: "Corporate Catering",
+      title: "Feed the Whole Office", desc: "Sandwich trays, wrap towers & hot entrees", photo: "corporate-catering.jpg", focus: "50% 35%" },
+    { id: "p-corporate-xmas", tv: 2, type: "signature", season: ["11-15", "12-31"], eyebrow: "Office Holiday Parties",
+      title: "Your Party, Catered", desc: "Sandwich trays & carving boards", photo: "corporate-xmas.jpg", focus: "50% 35%" },
     { id: "p-event-grazing", tv: 2, type: "signature", eyebrow: "Catering", title: "Event Ready",
       desc: "Order a spread for your next party", photo: "event-grazing.jpg", focus: "50% 45%" },     // IG DejiZehmDTZ
     // Videos
@@ -1179,6 +1194,11 @@
     if (!p.priceId || isBrandSpot(p)) return "";
     return p.size ? RS.size(p.priceId, p.size) : RS.price(p.priceId);
   }
+  /** True when today (yyyy-MM-dd) falls in ["MM-DD", "MM-DD"], any year. */
+  function inSeason(range, today) {
+    const md = today.slice(5), a = range[0], b = range[1];
+    return a <= b ? md >= a && md <= b : md >= a || md <= b;
+  }
   /** Promos that may show right now, highest priority first. */
   function eligible() {
     let list;
@@ -1191,6 +1211,8 @@
       if (p.hours && (hour < p.hours[0] || hour >= p.hours[1])) return false;
       if (p.from && today < p.from) return false;
       if (p.until && today > p.until) return false;
+      if (p.season && !inSeason(p.season, today)) return false;
+      if (p.offSeason && inSeason(p.offSeason, today)) return false;
       if (p.img && photoOk[p.img] !== true) return false;
       if (p.photo && photoOk[p.photo] !== true) return false;
       if (p.brandImg && photoOk[p.brandImg] !== true) return false;
