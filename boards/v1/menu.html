@@ -13,6 +13,8 @@
   Options:  &motion=0   still pictures only (no movement)
             &promo=ID   hold one scene on screen (ID from PROMOS)
             &day=2      preview another weekday (1 = Monday)
+            &hour=16    preview another time of day (shop hour, 0-23)
+            &wx=cold    preview cold/wet weather (wx=mild for not cold)
             &video=0    never play video, stills only
             &show=0     no full-screen reels
             &test86=L040,L052   preview sold out
@@ -475,7 +477,9 @@
   const DEBUG = params.get("debug") === "1";
   const VIDEO_DIR = "video/";          // clips live in boards/v1/video
   const VIDEO_OFF = params.get("video") === "0";
-  const PIN = params.get("promo") || "";                 // hold one promo (preview / freeze)
+  const PIN = params.get("promo") || "";
+  const HOUR_TEST = params.get("hour");                   // preview a time of day
+  const WX_TEST = params.get("wx");                       // preview the weather: cold | mild                 // hold one promo (preview / freeze)
   const weekday = () => Number(params.get("day")) || RS.weekday();   // &day= is for previews only
   const STILL = params.get("motion") === "0" ||
     (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -526,17 +530,17 @@
     // just so the frame is built; dressLive swaps in the right one.
     { id: "t-cookie-spot", tv: 1, type: "daily", live: "cookiespot", priority: 1, seconds: 10, eyebrow: "Cookie of the Month",
       photo: "cookie-smores.jpg", focus: "50% 50%" },
-    { id: "t-soups", tv: 2, type: "daily", live: "soups", priority: 2, seconds: 14, eyebrow: "Homemade Soups Today",
+    { id: "t-soups", boost: ["morning"], tv: 2, type: "daily", live: "soups", priority: 2, seconds: 14, eyebrow: "Homemade Soups Today",
       desc: "Made in house, preservative free" },   // Ludwig's own words on their soup posts
     // One of today's soups, big photo, a different one each time round
     // (only soups that have a photo in SOUP_PHOTOS). photo = any soup file,
     // just so the frame is built; dressLive swaps in the right one.
-    { id: "t-soup-spot", tv: 2, type: "daily", live: "soupspot", priority: 2, seconds: 10, eyebrow: "Homemade Soup of the Day",
+    { id: "t-soup-spot", boost: ["morning"], tv: 2, type: "daily", live: "soupspot", priority: 2, seconds: 10, eyebrow: "Homemade Soup of the Day",
       photo: "soup-chicken-noodle.jpg", focus: "50% 55%" },
-    { id: "t-special-1", type: "daily", live: "special", nth: 0, priority: 1, seconds: 12 },
-    { id: "t-special-2", type: "daily", live: "special", nth: 1, priority: 1, seconds: 12 },
-    { id: "t-special-3", type: "daily", live: "special", nth: 2, priority: 1, seconds: 12 },
-    { id: "t-special-4", type: "daily", live: "special", nth: 3, priority: 1, seconds: 12 },
+    { id: "t-special-1", boost: ["lunch"], type: "daily", live: "special", nth: 0, priority: 1, seconds: 12 },
+    { id: "t-special-2", boost: ["lunch"], type: "daily", live: "special", nth: 1, priority: 1, seconds: 12 },
+    { id: "t-special-3", boost: ["lunch"], type: "daily", live: "special", nth: 2, priority: 1, seconds: 12 },
+    { id: "t-special-4", boost: ["lunch"], type: "daily", live: "special", nth: 3, priority: 1, seconds: 12 },
     // Catering spotlight over Ludwig's own catering photos (one per TV, from that TV's own set).
     { id: "t-catering-1", tv: 1, type: "daily", live: "catering", priority: 1, seconds: 12, eyebrow: "Ludwig's Catering",
       photo: "fruit-platter.jpg", focus: "50% 40%" },
@@ -546,7 +550,7 @@
     // TV 1 (pizza): 5 pictures + 5 videos, none shared with TV 2.
     // =====================================================================
     // Words + logo (Ludwig's own copy). Not counted as a picture.
-    { id: "bake-at-home", tv: 1, type: "signature", eyebrow: "Bake-at-Home", title: "Fresh & Local",
+    { id: "bake-at-home", boost: ["dinner"], tv: 1, type: "signature", eyebrow: "Bake-at-Home", title: "Fresh & Local",
       desc: "All natural. No additives, no preservatives, nothing artificial.", brandImg: "ludwigs-logo.png", art: { w: 330 } },
     // Pictures: Ludwig's own (Facebook / Instagram). Brian's ratings in brackets.
     { id: "since-1998", tv: 1, type: "signature", eyebrow: "Since 1998", title: "Fine Foods & Catering",
@@ -564,10 +568,10 @@
       title: "Christmas, Catered", desc: "Platters, carving boards & hot trays", photo: "xmas-catering.jpg", focus: "50% 35%" },
     { id: "p-newyear-catering", tv: 1, type: "signature", season: ["12-26", "01-01"], eyebrow: "New Year's",
       title: "Ring It In", desc: "Party platters & hot trays to go", photo: "newyear-catering.jpg", focus: "50% 35%" },
-    { id: "p-dessert", tv: 1, type: "signature", eyebrow: "Something Sweet", title: "Save Room for Dessert",
+    { id: "p-dessert", boost: ["dinner"], tv: 1, type: "signature", eyebrow: "Something Sweet", title: "Save Room for Dessert",
       photo: "dessert.jpg", focus: "45% 40%" },                                                         // FB 1568048591987462 [7]
     // Videos: Ludwig's own reels (real footage), plus one stock clip.
-    { id: "v-smores-tarts", tv: 1, type: "signature", footage: "real", seconds: 9, eyebrow: "Something Sweet", title: "S’mores Tarts",
+    { id: "v-smores-tarts", boost: ["dinner"], tv: 1, type: "signature", footage: "real", seconds: 9, eyebrow: "Something Sweet", title: "S’mores Tarts",
       video: "real-smores-tarts.mp4", poster: "real-smores-tarts.jpg", loop: false },                  // FB reel 1102516069013188
     { id: "v-dotcake-frost", tv: 1, type: "signature", footage: "real", seconds: 9, eyebrow: "Made Here", title: "Dot Cakes",
       video: "real-dotcake-frost.mp4", poster: "real-dotcake-frost.jpg", loop: false },                // FB reel 1557177479453497
@@ -584,17 +588,17 @@
     // Pictures
     // Ludwig's x Proudly Featuring Boar's Head (animated). 10 of Ludwig's own
     // sandwich photos, next one each time round. Counts as one picture.
-    { id: "boars-head", tv: 2, type: "signature", feature: "bh", seconds: 14, eyebrow: "Ludwig’s Deli", title: "Stacked High",
+    { id: "boars-head", boost: ["lunch"], tv: 2, type: "signature", feature: "bh", seconds: 14, eyebrow: "Ludwig’s Deli", title: "Stacked High",
       photo: "bh-sandwich-01.jpg", focus: "50% 100%",
       // FB photos 1506156848176637, 1502063625252626, 1473129491479373, 1507900314668957, 1371998201592503,
       // 1514145317377790, 1426496922809297, 1495775302548125, 1378126594312997, 1489290416529947
       photos: ["bh-sandwich-01.jpg", "bh-sandwich-03.jpg", "bh-sandwich-04.jpg", "bh-sandwich-05.jpg", "bh-sandwich-06.jpg",
                "bh-sandwich-07.jpg", "bh-sandwich-08.jpg", "bh-sandwich-09.jpg", "bh-sandwich-10.jpg", "bh-sandwich-11.jpg"] },
-    { id: "p-wrap-special", tv: 2, type: "signature", eyebrow: "Ask About Today’s", title: "Sandwich Special",
+    { id: "p-wrap-special", boost: ["lunch"], tv: 2, type: "signature", eyebrow: "Ask About Today’s", title: "Sandwich Special",
       desc: "Call or stop in to order one", photo: "wrap-special.jpg", focus: "30% 40%" },              // FB 1668548125270841 [7]
-    { id: "p-cutlet-special", tv: 2, type: "signature", eyebrow: "Ludwig’s Deli", title: "Made to Order",
+    { id: "p-cutlet-special", boost: ["lunch"], tv: 2, type: "signature", eyebrow: "Ludwig’s Deli", title: "Made to Order",
       photo: "cutlet-special.jpg", focus: "50% 100%" },                                                 // FB 1582043103921344 (chalkboard price cropped off)
-    { id: "p-entree-spread", tv: 2, type: "signature", eyebrow: "Entrée Case", title: "Dinner, Done",
+    { id: "p-entree-spread", boost: ["dinner"], tv: 2, type: "signature", eyebrow: "Entrée Case", title: "Dinner, Done",
       desc: "Made by our in-house chefs", photo: "entree-spread.jpg", focus: "50% 40%" },              // IG DecnBkpmFFu
     // Boar's Head Sweet Slice holiday ham gift box (Nov 24). Hero image made in
     // ChatGPT from Brian's in-store photo of the real box. Copy only says what
@@ -611,18 +615,18 @@
     { id: "p-event-grazing", tv: 2, type: "signature", eyebrow: "Catering", title: "Event Ready",
       desc: "Order a spread for your next party", photo: "event-grazing.jpg", focus: "50% 45%" },     // IG DejiZehmDTZ
     // Videos
-    { id: "v-entree-pan", tv: 2, type: "signature", footage: "real", seconds: 7, eyebrow: "Entrée Case", title: "Ready When You Are",
+    { id: "v-entree-pan", boost: ["dinner"], tv: 2, type: "signature", footage: "real", seconds: 7, eyebrow: "Entrée Case", title: "Ready When You Are",
       video: "real-entree-pan.mp4", poster: "real-entree-pan.jpg", loop: false },                      // IG reel DdtxBUcOIS6
-    { id: "v-entree-a", tv: 2, type: "signature", footage: "real", seconds: 9, eyebrow: "Entrée Case", title: "Fresh This Week",
+    { id: "v-entree-a", boost: ["dinner"], tv: 2, type: "signature", footage: "real", seconds: 9, eyebrow: "Entrée Case", title: "Fresh This Week",
       video: "real-entree-a.mp4", poster: "real-entree-a.jpg", loop: false },                          // FB reel 1558646881856895 (first half)
-    { id: "v-entree-b", tv: 2, type: "signature", footage: "real", seconds: 9, eyebrow: "In-House Chefs", title: "Chef-Made Dinners",
+    { id: "v-entree-b", boost: ["dinner"], tv: 2, type: "signature", footage: "real", seconds: 9, eyebrow: "In-House Chefs", title: "Chef-Made Dinners",
       video: "real-entree-b.mp4", poster: "real-entree-b.jpg", loop: false },                          // FB reel 1558646881856895 (second half)
-    { id: "v-indiv-dinners", tv: 2, type: "signature", footage: "real", seconds: 9, eyebrow: "Individual Dinners", title: "Made This Week",
+    { id: "v-indiv-dinners", boost: ["dinner"], tv: 2, type: "signature", footage: "real", seconds: 9, eyebrow: "Individual Dinners", title: "Made This Week",
       video: "real-indiv-dinners.mp4", poster: "real-indiv-dinners.jpg", loop: false },                // IG reel DcEsQ7Nuk-9
     // Replaces the hacksaw sandwich clip (Brian, Nov 24). Mixkit 3806 (free, no
     // attribution needed): meatballs simmering in red sauce, matches Ludwig's
     // Italian Meatballs / Pasta & Meatballs. Unpriced brand spot.
-    { id: "v-meatballs", tv: 2, type: "brand", footage: "stock", seconds: 9, eyebrow: "Ludwig’s Kitchen", brandTitle: "Italian Night",
+    { id: "v-meatballs", boost: ["dinner"], tv: 2, type: "brand", footage: "stock", seconds: 9, eyebrow: "Ludwig’s Kitchen", brandTitle: "Italian Night",
       video: "stock-meatballs.mp4", poster: "stock-meatballs.jpg", loop: false },
     { id: "v-deli-sandwich", tv: 2, type: "brand", footage: "stock", seconds: 9, eyebrow: "Ludwig’s Deli", brandTitle: "Stacked & Sliced",
       video: "deli-sandwich.mp4", poster: "deli-sandwich.jpg", loop: false , enabled: false /* Brian Nov 24: guy hacksawing a toasted sandwich. Replace with a better deli clip. */ },                          // Pexels 41189329 [7]
@@ -1018,6 +1022,7 @@
   PROMOS.forEach(p => { if (!p.tv || p.tv === tv) { preload(p.img); preload(p.photo); preload(p.brandImg); preload(p.poster, VIDEO_DIR); (p.photos || []).forEach(f => preload(f)); } });
 
   function shopHour() {
+    if (HOUR_TEST !== null && HOUR_TEST !== "") return Number(HOUR_TEST) % 24;
     return Number(new Date().toLocaleString("en-US", { timeZone: RS.TZ, hour: "numeric", hour12: false })) % 24;
   }
   /* Live scenes: what the counter set on the tablet. The dates come with
@@ -1217,6 +1222,46 @@
     const md = today.slice(5), a = range[0], b = range[1];
     return a <= b ? md >= a && md <= b : md >= a || md <= b;
   }
+  /* ---------- Time of day + weather (Brian, Nov 25) ----------
+     The same scenes, pushed by the clock: promos tagged boost: [...] move to
+     the front of the loop and show twice per loop during their part of the
+     day. Soups also get pushed when it is cold or wet in Glenmoore.
+       morning  open to 11 am   homemade soups (posted ~8:30)
+       lunch    11 am to 3 pm   specials, sandwiches, deli
+       dinner   3 pm to close   entree case, bake-at-home, dessert          */
+  function dayPart() {
+    const h = shopHour();
+    return h < 11 ? "morning" : h < 15 ? "lunch" : "dinner";
+  }
+  // Weather: Open-Meteo (free, no key, no account). Checked every 30 min,
+  // kept in localStorage so a reload knows right away. Fails quietly to
+  // "not cold", so bad weather data can never break the board.
+  const WX_URL = "https://api.open-meteo.com/v1/forecast?latitude=40.10&longitude=-75.77" +
+    "&current=temperature_2m,precipitation,weather_code&temperature_unit=fahrenheit";
+  const WX_KEY = "ludwigs_weather_v1", COLD_F = 45;
+  let wx = null;   // { f, wet, at }
+  try { wx = JSON.parse(localStorage.getItem(WX_KEY) || "null"); } catch (e) {}
+  function loadWeather() {
+    fetch(WX_URL, { cache: "no-store" }).then(r => r.json()).then(j => {
+      const c = j.current || {}, code = Number(c.weather_code);
+      // WMO codes: 51-67 drizzle/rain, 71-77 snow, 80-86 showers, 95-99 storms
+      const wet = Number(c.precipitation) > 0 || (code >= 51 && code <= 67) || (code >= 71 && code <= 86) || code >= 95;
+      wx = { f: Math.round(Number(c.temperature_2m)), wet: wet, at: Date.now() };
+      try { localStorage.setItem(WX_KEY, JSON.stringify(wx)); } catch (e) {}
+    }).catch(() => {});
+  }
+  loadWeather();
+  setInterval(loadWeather, 30 * 60000);
+  function soupWeather() {
+    if (WX_TEST) return WX_TEST === "cold";
+    if (!wx || Date.now() - wx.at > 3 * 3600000) return false;      // stale = ignore
+    return wx.f < COLD_F || wx.wet;
+  }
+  function boosted(p) {
+    if (p.boost && p.boost.indexOf(dayPart()) >= 0) return true;
+    return (p.live === "soups" || p.live === "soupspot") && soupWeather();
+  }
+
   /** Promos that may show right now, highest priority first. */
   function eligible() {
     let list;
@@ -1264,6 +1309,31 @@
       if (photos.length) mixed.push(photos.shift());
       if (clips.length) mixed.push(clips.shift());
     }
+    // Time of day / weather: boosted scenes move to the front of the loop
+    // (photos and clips still alternate), then up to BOOST_REPEAT of them
+    // come round a second time, spread evenly through the rest of the loop,
+    // never next to themselves.
+    const pushedTop = top.filter(boosted);
+    const pushedMixed = mixed.filter(boosted);
+    if (pushedTop.length || pushedMixed.length) {
+      const front = [], pPh = pushedMixed.filter(p => !p.video), pCl = pushedMixed.filter(p => p.video);
+      const rest = mixed.filter(p => pushedMixed.indexOf(p) < 0);
+      while (pPh.length || pCl.length) {
+        // Out of boosted photos? Borrow a regular photo so clips never run back to back.
+        const borrow = rest.findIndex(p => !p.video);
+        const ph = pPh.length ? pPh.shift() : (pCl.length && front.length && borrow >= 0 ? rest.splice(borrow, 1)[0] : null);
+        if (ph) front.push(ph);
+        if (pCl.length) front.push(pCl.shift());
+      }
+      const again = pushedTop.concat(front.filter(boosted)).slice(0, BOOST_REPEAT);
+      const step = Math.max(1, Math.floor(rest.length / (again.length + 1)));
+      again.forEach((p, i) => rest.splice(Math.min(rest.length, step * (i + 1) + i), 0, p));
+      mixed.length = 0;
+      front.concat(rest).forEach(p => mixed.push(p));
+      for (let i = 1; i < mixed.length; i++) {              // no scene twice in a row
+        if (mixed[i] === mixed[i - 1] && i + 1 < mixed.length) { const t = mixed[i]; mixed[i] = mixed[i + 1]; mixed[i + 1] = t; }
+      }
+    }
     // Catering comes round more often than the rest: after the specials,
     // it shows again every CATERING_EVERY scenes, so a customer waiting at
     // the counter sees it at least once (Brian, Nov 24).
@@ -1275,6 +1345,7 @@
     return list.length ? list : [BRAND_CARD];
   }
   const CATERING_EVERY = 3;   // catering scene repeats after every 3 other scenes
+  const BOOST_REPEAT = 3;     // at most 3 time-of-day/weather scenes show twice per loop
   const secondsOf = p => Math.max(4, Number(p.seconds) || PROMO_SECONDS);
 
   /** Which promo the clock says is on right now, and how long until the next. */
@@ -1598,7 +1669,7 @@
     if (!d) { d = document.createElement("div"); d.id = "diag"; stage.appendChild(d); }
     const bad = Object.keys(photoOk).filter(f => photoOk[f] === false);
     d.textContent = "ludwigs v1 tv" + tv + " | text " + Math.round(fitState.fs * 100) + "%" + (fitState.small ? " TOO SMALL" : "") +
-      " pad " + fitState.pad + " | promos " + heroList.map(p => p.id).join(",") +
+      " pad " + fitState.pad + " | " + dayPart() + (wx ? " " + wx.f + "F" + (wx.wet ? " wet" : "") : "") + (soupWeather() ? " SOUP" : "") + " | promos " + heroList.map(p => p.id).join(",") +
       " | feed " + (feedAt ? Math.round((Date.now() - feedAt) / 60000) + " min ago" : "saved copy") +
       (bad.length ? " | MISSING " + bad.join(",") : "") + (videoNote ? " | video " + videoNote : "") + (VIDEO_OFF ? " | video off" : "") + (STILL ? " | still" : "");
   }
