@@ -1233,22 +1233,40 @@
     const h = shopHour();
     return h < 11 ? "morning" : h < 15 ? "lunch" : "dinner";
   }
-  // Weather: Open-Meteo (free, no key, no account). Checked every 30 min,
-  // kept in localStorage so a reload knows right away. Fails quietly to
-  // "not cold", so bad weather data can never break the board.
+  // Weather, free with no key or account: Open-Meteo first, then the National
+  // Weather Service (KMQS, Chester County airport) if Open-Meteo is down.
+  // Checked every 30 min and kept in localStorage. A bad or failed reading is
+  // thrown away (the last good one stays), so weather can never break the board.
   const WX_URL = "https://api.open-meteo.com/v1/forecast?latitude=40.10&longitude=-75.77" +
     "&current=temperature_2m,precipitation,weather_code&temperature_unit=fahrenheit";
+  const NWS_URL = "https://api.weather.gov/stations/KMQS/observations/latest";
   const WX_KEY = "ludwigs_weather_v1", COLD_F = 45;
-  let wx = null;   // { f, wet, at }
+  let wx = null;   // { f, wet, at, src }
   try { wx = JSON.parse(localStorage.getItem(WX_KEY) || "null"); } catch (e) {}
+  if (wx && !Number.isFinite(wx.f)) wx = null;
+  const getJson = url => fetch(url, { cache: "no-store" }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+  function fromOpenMeteo(j) {
+    const c = j.current || {}, f = Number(c.temperature_2m), code = Number(c.weather_code);
+    if (!Number.isFinite(f)) throw new Error("no temp");
+    // WMO codes: 51-67 drizzle/rain, 71-77 snow, 80-86 showers, 95-99 storms
+    const wet = Number(c.precipitation) > 0 || (code >= 51 && code <= 67) || (code >= 71 && code <= 86) || code >= 95;
+    return { f: Math.round(f), wet: wet, src: "om" };
+  }
+  function fromNws(j) {
+    const p = j.properties || {}, c = p.temperature && p.temperature.value;
+    if (c === null || c === undefined || !Number.isFinite(Number(c))) throw new Error("no temp");
+    const wet = /rain|drizzle|snow|sleet|shower|storm|freezing/i.test(p.textDescription || "") ||
+      Number(p.precipitationLastHour && p.precipitationLastHour.value) > 0;
+    return { f: Math.round(Number(c) * 9 / 5 + 32), wet: wet, src: "nws" };
+  }
   function loadWeather() {
-    fetch(WX_URL, { cache: "no-store" }).then(r => r.json()).then(j => {
-      const c = j.current || {}, code = Number(c.weather_code);
-      // WMO codes: 51-67 drizzle/rain, 71-77 snow, 80-86 showers, 95-99 storms
-      const wet = Number(c.precipitation) > 0 || (code >= 51 && code <= 67) || (code >= 71 && code <= 86) || code >= 95;
-      wx = { f: Math.round(Number(c.temperature_2m)), wet: wet, at: Date.now() };
-      try { localStorage.setItem(WX_KEY, JSON.stringify(wx)); } catch (e) {}
-    }).catch(() => {});
+    getJson(WX_URL).then(fromOpenMeteo)
+      .catch(() => getJson(NWS_URL).then(fromNws))
+      .then(r => {
+        wx = Object.assign(r, { at: Date.now() });
+        try { localStorage.setItem(WX_KEY, JSON.stringify(wx)); } catch (e) {}
+      })
+      .catch(() => {});                                     // both down: keep the last good reading
   }
   loadWeather();
   setInterval(loadWeather, 30 * 60000);
@@ -1669,7 +1687,7 @@
     if (!d) { d = document.createElement("div"); d.id = "diag"; stage.appendChild(d); }
     const bad = Object.keys(photoOk).filter(f => photoOk[f] === false);
     d.textContent = "ludwigs v1 tv" + tv + " | text " + Math.round(fitState.fs * 100) + "%" + (fitState.small ? " TOO SMALL" : "") +
-      " pad " + fitState.pad + " | " + dayPart() + (wx ? " " + wx.f + "F" + (wx.wet ? " wet" : "") : "") + (soupWeather() ? " SOUP" : "") + " | promos " + heroList.map(p => p.id).join(",") +
+      " pad " + fitState.pad + " | " + dayPart() + (wx ? " " + wx.f + "F" + (wx.wet ? " wet" : "") + " " + wx.src : " no weather") + (soupWeather() ? " SOUP" : "") + " | promos " + heroList.map(p => p.id).join(",") +
       " | feed " + (feedAt ? Math.round((Date.now() - feedAt) / 60000) + " min ago" : "saved copy") +
       (bad.length ? " | MISSING " + bad.join(",") : "") + (videoNote ? " | video " + videoNote : "") + (VIDEO_OFF ? " | video off" : "") + (STILL ? " | still" : "");
   }
